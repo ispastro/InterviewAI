@@ -71,7 +71,7 @@ interface ConfirmModalProps {
     message: string;
     confirmText?: string;
     cancelText?: string;
-    variant?: 'destructive' | 'default';
+    variant?: 'destructive' | 'primary';
 }
 
 export function ConfirmModal({
@@ -82,7 +82,7 @@ export function ConfirmModal({
     message,
     confirmText = 'Confirm',
     cancelText = 'Cancel',
-    variant = 'default',
+    variant = 'primary',
 }: ConfirmModalProps) {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title}>
@@ -91,7 +91,7 @@ export function ConfirmModal({
                 <Button variant="outline" onClick={onClose}>
                     {cancelText}
                 </Button>
-                <Button variant={variant === 'destructive' ? 'destructive' : 'default'} onClick={onConfirm}>
+                <Button variant={variant === 'destructive' ? 'destructive' : 'primary'} onClick={onConfirm}>
                     {confirmText}
                 </Button>
             </div>
