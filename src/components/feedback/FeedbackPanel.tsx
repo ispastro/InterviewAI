@@ -21,7 +21,7 @@ export function FeedbackPanel({ feedback, isEvaluating = false }: FeedbackPanelP
                 className="h-full flex items-center justify-center"
             >
                 <div className="text-center">
-                    <div className="w-10 h-10 mx-auto mb-4 border-4 border-[#E5E7EB] border-t-[#2563EB] rounded-full animate-spin" />
+                    <div className="w-10 h-10 mx-auto mb-4 border-4 border-[#E5E7EB] border-t-[#0D9488] rounded-full animate-spin" />
                     <p className="text-[#475569] font-[Lexend]">Evaluating your answer...</p>
                 </div>
             </motion.div>

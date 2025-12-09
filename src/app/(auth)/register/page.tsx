@@ -112,7 +112,7 @@ export default function RegisterPage() {
                             <label className="flex items-start gap-3 cursor-pointer group">
                                 <div
                                     className={`w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${acceptTerms
-                                            ? 'bg-[#2563EB] border-[#2563EB]'
+                                            ? 'bg-[#0D9488] border-[#0D9488]'
                                             : 'border-[#E5E7EB] group-hover:border-[#94A3B8]'
                                         }`}
                                     onClick={() => setAcceptTerms(!acceptTerms)}
@@ -121,11 +121,11 @@ export default function RegisterPage() {
                                 </div>
                                 <span className="text-sm text-[#475569] font-[Lexend]">
                                     I agree to the{' '}
-                                    <Link href="#" className="text-[#2563EB] hover:underline">
+                                    <Link href="#" className="text-[#0D9488] hover:underline">
                                         Terms of Service
                                     </Link>{' '}
                                     and{' '}
-                                    <Link href="#" className="text-[#2563EB] hover:underline">
+                                    <Link href="#" className="text-[#0D9488] hover:underline">
                                         Privacy Policy
                                     </Link>
                                 </span>
@@ -147,7 +147,7 @@ export default function RegisterPage() {
 
                         <p className="mt-8 text-center text-sm text-[#475569] font-[Lexend]">
                             Already have an account?{' '}
-                            <Link href="/login" className="text-[#2563EB] hover:underline font-medium">
+                            <Link href="/login" className="text-[#0D9488] hover:underline font-medium">
                                 Sign in
                             </Link>
                         </p>

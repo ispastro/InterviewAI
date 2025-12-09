@@ -23,9 +23,9 @@
   --user-bubble: #E2E8F0;
   --ai-bubble: #F1F5F9;
 
-  /* Accents (shadcn defaults) */
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
+  /* Accents - Classic Teal */
+  --primary: #0D9488;
+  --primary-hover: #0F766E;
   --primary-foreground: #FFFFFF;
 
   --secondary: #F1F5F9;

@@ -14,7 +14,7 @@ export function ScoreCard({ label, score, maxScore = 5, color = 'blue' }: ScoreC
     const percentage = (score / maxScore) * 100;
 
     const colors = {
-        blue: 'bg-[#2563EB]',
+        blue: 'bg-[#0D9488]',
         green: 'bg-[#10B981]',
         amber: 'bg-[#F59E0B]',
         purple: 'bg-[#8B5CF6]',

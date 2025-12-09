@@ -30,7 +30,7 @@ export function Select({ options, value, onChange, label, className }: SelectPro
                     'w-full h-10 px-3 py-2 rounded-[12px] appearance-none cursor-pointer font-[Lexend] text-sm',
                     'bg-white border border-[#E5E7EB]',
                     'text-[#0F172A]',
-                    'focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent',
+                    'focus:outline-none focus:ring-2 focus:ring-[#0D9488] focus:border-transparent',
                     'transition-all duration-200',
                     'bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23475569\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")]',
                     'bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat',

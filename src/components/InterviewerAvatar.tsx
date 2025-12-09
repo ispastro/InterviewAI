@@ -33,7 +33,7 @@ export function InterviewerAvatar({
             {isThinking && (
                 <motion.div
                     className={cn(
-                        'absolute inset-0 rounded-full bg-[#2563EB]/20 blur-lg',
+                        'absolute inset-0 rounded-full bg-[#0D9488]/20 blur-lg',
                         sizes[size]
                     )}
                     animate={{

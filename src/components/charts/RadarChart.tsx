@@ -41,8 +41,8 @@ export function RadarChart({ scores }: RadarChartProps) {
                 <Radar
                     name="Skills"
                     dataKey="value"
-                    stroke="#2563EB"
-                    fill="#2563EB"
+                    stroke="#0D9488"
+                    fill="#0D9488"
                     fillOpacity={0.2}
                     strokeWidth={2}
                 />

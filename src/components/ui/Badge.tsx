@@ -14,7 +14,7 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
         success: 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]',
         warning: 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]',
         error: 'bg-[#FEF2F2] text-[#DC2626] border-[#FECACA]',
-        info: 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]',
+        info: 'bg-[#F0FDFA] text-[#0D9488] border-[#99F6E4]',
     };
 
     return (

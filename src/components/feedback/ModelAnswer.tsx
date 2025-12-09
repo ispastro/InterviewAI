@@ -18,7 +18,7 @@ export function ModelAnswer({ answer }: ModelAnswerProps) {
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full flex items-center justify-between p-4 bg-[#F8FAFC] hover:bg-[#F1F5F9] transition-colors"
             >
-                <span className="flex items-center gap-2 text-sm font-semibold text-[#2563EB] font-[Lora]">
+                <span className="flex items-center gap-2 text-sm font-semibold text-[#0D9488] font-[Lora]">
                     <Lightbulb size={16} />
                     Suggested Model Answer
                 </span>

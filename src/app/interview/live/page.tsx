@@ -252,7 +252,7 @@ export default function LiveInterviewPage() {
     return (
         <Suspense fallback={
             <div className="h-screen flex items-center justify-center bg-white">
-                <div className="w-10 h-10 border-4 border-[#E5E7EB] border-t-[#2563EB] rounded-full animate-spin" />
+                <div className="w-10 h-10 border-4 border-[#E5E7EB] border-t-[#0D9488] rounded-full animate-spin" />
             </div>
         }>
             <LiveInterviewContent />

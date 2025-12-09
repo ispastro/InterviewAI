@@ -27,7 +27,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 className={cn(
                     'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
                     isUser
-                        ? 'bg-[#2563EB]'
+                        ? 'bg-[#0D9488]'
                         : 'bg-[#0F172A]'
                 )}
             >

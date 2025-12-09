@@ -2,9 +2,8 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Bot, BarChart3, MessageSquare, Mic, Target, Sparkles } from 'lucide-react';
+import { ArrowRight, Bot, BarChart3, MessageSquare, Mic, Target, Sparkles, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { InterviewerAvatar } from '@/components/InterviewerAvatar';
 
 const features = [
   {
@@ -27,6 +26,13 @@ const features = [
     title: 'Role-Specific Questions',
     description: 'Tailored questions for Software Engineers, Product Managers, and more.',
   },
+];
+
+const benefits = [
+  'Unlimited practice sessions',
+  'Personalized feedback',
+  'Track your progress',
+  'No credit card required',
 ];
 
 export default function LandingPage() {
@@ -53,100 +59,73 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-28 pb-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left - Content */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFF6FF] border border-[#BFDBFE] mb-6">
-                <Sparkles size={16} className="text-[#2563EB]" />
-                <span className="text-sm text-[#2563EB] font-[Lexend]">AI-Powered Interview Practice</span>
-              </div>
+      {/* Hero Section - Centered */}
+      <section className="pt-32 pb-20 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F0FDFA] border border-[#99F6E4] mb-6">
+              <Sparkles size={16} className="text-[#0D9488]" />
+              <span className="text-sm text-[#0D9488] font-[Lexend]">AI-Powered Interview Practice</span>
+            </div>
 
-              <h1 className="text-4xl lg:text-5xl font-bold text-[#0F172A] leading-tight mb-6 font-[Lora]">
-                Master Your Interviews With AI Coaching
-              </h1>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#0F172A] leading-tight mb-6 font-[Lora]">
+              Master Your Interviews<br />
+              <span className="text-[#0D9488]">With AI Coaching</span>
+            </h1>
 
-              <p className="text-lg text-[#475569] mb-8 max-w-lg font-[Lexend]">
-                Practice real interview scenarios, receive instant feedback, and build confidence — all powered by advanced AI technology.
-              </p>
+            <p className="text-lg md:text-xl text-[#475569] mb-8 max-w-2xl mx-auto font-[Lexend]">
+              Practice real interview scenarios, receive instant feedback, and build the confidence you need to land your dream job.
+            </p>
 
-              <div className="flex flex-wrap gap-4">
-                <Link href="/interview/setup">
-                  <Button size="lg">
-                    Start Mock Interview
-                    <ArrowRight size={18} className="ml-2" />
-                  </Button>
-                </Link>
-                <Link href="/dashboard">
-                  <Button variant="secondary" size="lg">
-                    View Dashboard
-                  </Button>
-                </Link>
-              </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+              <Link href="/interview/setup">
+                <Button size="lg" className="w-full sm:w-auto">
+                  Start Free Practice
+                  <ArrowRight size={18} className="ml-2" />
+                </Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button variant="secondary" size="lg" className="w-full sm:w-auto">
+                  View Dashboard
+                </Button>
+              </Link>
+            </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-6 mt-12 pt-8 border-t border-[#E5E7EB]">
-                <div>
-                  <p className="text-3xl font-bold text-[#0F172A] font-[Lora]">10K+</p>
-                  <p className="text-sm text-[#94A3B8] font-[Lexend]">Mock Interviews</p>
+            {/* Benefits */}
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+              {benefits.map((benefit) => (
+                <div key={benefit} className="flex items-center gap-2">
+                  <CheckCircle size={16} className="text-[#0D9488]" />
+                  <span className="text-sm text-[#475569] font-[Lexend]">{benefit}</span>
                 </div>
-                <div>
-                  <p className="text-3xl font-bold text-[#0F172A] font-[Lora]">95%</p>
-                  <p className="text-sm text-[#94A3B8] font-[Lexend]">Success Rate</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-[#0F172A] font-[Lora]">4.9★</p>
-                  <p className="text-sm text-[#94A3B8] font-[Lexend]">User Rating</p>
-                </div>
-              </div>
-            </motion.div>
+              ))}
+            </div>
+          </motion.div>
 
-            {/* Right - Illustration */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="relative hidden lg:block"
-            >
-              <div className="relative w-full aspect-square max-w-md mx-auto">
-                {/* Main card */}
-                <div className="absolute inset-8 bg-white rounded-[20px] border border-[#E5E7EB] shadow-[0px_8px_24px_rgba(0,0,0,0.08)] p-8">
-                  <div className="flex items-center gap-4 mb-6">
-                    <InterviewerAvatar size="lg" isThinking />
-                    <div>
-                      <p className="text-[#0F172A] font-semibold font-[Lora]">AI Interviewer</p>
-                      <p className="text-sm text-[#10B981] font-[Lexend]">Ready to practice</p>
-                    </div>
-                  </div>
-
-                  {/* Sample question */}
-                  <div className="bg-[#F8FAFC] rounded-[16px] p-4 border border-[#E5E7EB]">
-                    <p className="text-[#475569] text-sm font-[Lexend]">
-                      &quot;Tell me about a challenging project you&apos;ve worked on and how you overcame obstacles...&quot;
-                    </p>
-                  </div>
-
-                  {/* Score preview */}
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    {['Communication', 'Confidence'].map((skill) => (
-                      <div key={skill} className="text-center">
-                        <div className="w-12 h-12 mx-auto rounded-full bg-[#2563EB] flex items-center justify-center mb-2">
-                          <span className="text-white font-semibold font-[Lexend]">4.5</span>
-                        </div>
-                        <p className="text-xs text-[#94A3B8] font-[Lexend]">{skill}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+          {/* Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="grid grid-cols-3 gap-8 mt-16 pt-8 border-t border-[#E5E7EB] max-w-lg mx-auto"
+          >
+            <div>
+              <p className="text-3xl font-bold text-[#0F172A] font-[Lora]">10K+</p>
+              <p className="text-sm text-[#94A3B8] font-[Lexend]">Sessions</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-[#0F172A] font-[Lora]">95%</p>
+              <p className="text-sm text-[#94A3B8] font-[Lexend]">Success Rate</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-[#0F172A] font-[Lora]">4.9★</p>
+              <p className="text-sm text-[#94A3B8] font-[Lexend]">User Rating</p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -177,8 +156,8 @@ export default function LandingPage() {
                 transition={{ delay: index * 0.1 }}
                 className="group p-6 rounded-[20px] bg-white border border-[#E5E7EB] shadow-[0px_4px_16px_rgba(0,0,0,0.06)] hover:shadow-[0px_8px_24px_rgba(0,0,0,0.08)] transition-all duration-200"
               >
-                <div className="w-12 h-12 rounded-[12px] bg-[#EFF6FF] flex items-center justify-center mb-4 group-hover:bg-[#2563EB] transition-colors">
-                  <feature.icon size={24} className="text-[#2563EB] group-hover:text-white transition-colors" />
+                <div className="w-12 h-12 rounded-[12px] bg-[#F0FDFA] flex items-center justify-center mb-4 group-hover:bg-[#0D9488] transition-colors">
+                  <feature.icon size={24} className="text-[#0D9488] group-hover:text-white transition-colors" />
                 </div>
                 <h3 className="text-lg font-semibold text-[#0F172A] mb-2 font-[Lora]">{feature.title}</h3>
                 <p className="text-[#475569] text-sm font-[Lexend]">{feature.description}</p>
@@ -220,7 +199,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-lg bg-[#0F172A] flex items-center justify-center">
               <Bot size={16} className="text-white" />
             </div>
-            <span className="text-sm text-[#94A3B8] font-[Lexend]">© 2024 InterviewAI. All rights reserved.</span>
+            <span className="text-sm text-[#94A3B8] font-[Lexend]">© {new Date().getFullYear()} InterviewAI. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-[#94A3B8] font-[Lexend]">
             <Link href="#" className="hover:text-[#0F172A] transition-colors">Privacy</Link>

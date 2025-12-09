@@ -85,9 +85,9 @@ export default function InterviewSetupPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center mb-12"
                 >
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFF6FF] border border-[#BFDBFE] mb-6">
-                        <Sparkles size={16} className="text-[#2563EB]" />
-                        <span className="text-sm text-[#2563EB] font-[Lexend]">Customize Your Interview</span>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F0FDFA] border border-[#99F6E4] mb-6">
+                        <Sparkles size={16} className="text-[#0D9488]" />
+                        <span className="text-sm text-[#0D9488] font-[Lexend]">Customize Your Interview</span>
                     </div>
                     <h1 className="text-3xl font-bold text-[#0F172A] mb-4 font-[Lora]">
                         Set Up Your Interview
@@ -103,8 +103,8 @@ export default function InterviewSetupPage() {
                         <Card>
                             <CardContent className="p-6">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-10 h-10 rounded-[12px] bg-[#EFF6FF] flex items-center justify-center">
-                                        <Briefcase size={20} className="text-[#2563EB]" />
+                                    <div className="w-10 h-10 rounded-[12px] bg-[#F0FDFA] flex items-center justify-center">
+                                        <Briefcase size={20} className="text-[#0D9488]" />
                                     </div>
                                     <div>
                                         <h2 className="font-semibold text-[#0F172A] font-[Lora]">Job Role</h2>
@@ -144,11 +144,11 @@ export default function InterviewSetupPage() {
                                             className={cn(
                                                 'p-4 rounded-[16px] border transition-all duration-200 text-left',
                                                 settings.mode === type.id
-                                                    ? 'bg-[#EFF6FF] border-[#2563EB]'
+                                                    ? 'bg-[#F0FDFA] border-[#0D9488]'
                                                     : 'bg-white border-[#E5E7EB] hover:border-[#94A3B8]'
                                             )}
                                         >
-                                            <type.icon size={22} className={settings.mode === type.id ? 'text-[#2563EB]' : 'text-[#94A3B8]'} />
+                                            <type.icon size={22} className={settings.mode === type.id ? 'text-[#0D9488]' : 'text-[#94A3B8]'} />
                                             <p className="font-medium text-[#0F172A] mt-2 font-[Lora]">{type.label}</p>
                                             <p className="text-sm text-[#475569] font-[Lexend]">{type.description}</p>
                                         </button>
@@ -179,7 +179,7 @@ export default function InterviewSetupPage() {
                                             className={cn(
                                                 'p-4 rounded-[16px] border transition-all duration-200 text-center',
                                                 settings.difficulty === level.id
-                                                    ? 'bg-[#EFF6FF] border-[#2563EB]'
+                                                    ? 'bg-[#F0FDFA] border-[#0D9488]'
                                                     : 'bg-white border-[#E5E7EB] hover:border-[#94A3B8]'
                                             )}
                                         >
@@ -213,7 +213,7 @@ export default function InterviewSetupPage() {
                                             className={cn(
                                                 'p-4 rounded-[16px] border transition-all duration-200 text-center',
                                                 settings.interviewStyle === style.id
-                                                    ? 'bg-[#EFF6FF] border-[#2563EB]'
+                                                    ? 'bg-[#F0FDFA] border-[#0D9488]'
                                                     : 'bg-white border-[#E5E7EB] hover:border-[#94A3B8]'
                                             )}
                                         >
@@ -231,8 +231,8 @@ export default function InterviewSetupPage() {
                         <Card>
                             <CardContent className="p-6">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-10 h-10 rounded-[12px] bg-[#EFF6FF] flex items-center justify-center">
-                                        <Timer size={20} className="text-[#2563EB]" />
+                                    <div className="w-10 h-10 rounded-[12px] bg-[#F0FDFA] flex items-center justify-center">
+                                        <Timer size={20} className="text-[#0D9488]" />
                                     </div>
                                     <div>
                                         <h2 className="font-semibold text-[#0F172A] font-[Lora]">Duration</h2>
@@ -247,7 +247,7 @@ export default function InterviewSetupPage() {
                                             className={cn(
                                                 'p-4 rounded-[16px] border transition-all duration-200 text-center',
                                                 settings.duration === duration.value
-                                                    ? 'bg-[#EFF6FF] border-[#2563EB]'
+                                                    ? 'bg-[#F0FDFA] border-[#0D9488]'
                                                     : 'bg-white border-[#E5E7EB] hover:border-[#94A3B8]'
                                             )}
                                         >

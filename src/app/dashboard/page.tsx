@@ -72,7 +72,7 @@ export default function DashboardPage() {
 
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#2563EB] flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-[#0D9488] flex items-center justify-center">
                                 <span className="text-white font-semibold font-[Lexend]">{userName.charAt(0)}</span>
                             </div>
                             <span className="text-[#0F172A] font-medium hidden sm:block font-[Lexend]">{userName}</span>
@@ -119,8 +119,8 @@ export default function DashboardPage() {
                         <Link href="/interview/setup" className="block p-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-[12px] bg-[#EFF6FF] flex items-center justify-center group-hover:bg-[#2563EB] transition-colors">
-                                        <Play size={22} className="text-[#2563EB] group-hover:text-white transition-colors" />
+                                    <div className="w-12 h-12 rounded-[12px] bg-[#F0FDFA] flex items-center justify-center group-hover:bg-[#0D9488] transition-colors">
+                                        <Play size={22} className="text-[#0D9488] group-hover:text-white transition-colors" />
                                     </div>
                                     <div>
                                         <h3 className="font-semibold text-[#0F172A] font-[Lora]">Start New Interview</h3>
@@ -162,7 +162,7 @@ export default function DashboardPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <TrendingUp size={20} className="text-[#2563EB]" />
+                                    <TrendingUp size={20} className="text-[#0D9488]" />
                                     Performance Overview
                                 </CardTitle>
                             </CardHeader>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle className="flex items-center gap-2">
-                                    <Clock size={20} className="text-[#2563EB]" />
+                                    <Clock size={20} className="text-[#0D9488]" />
                                     Previous Sessions
                                 </CardTitle>
                                 <Link href="/sessions">
@@ -210,7 +210,7 @@ export default function DashboardPage() {
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-[12px] bg-[#2563EB] flex items-center justify-center">
+                                                    <div className="w-12 h-12 rounded-[12px] bg-[#0D9488] flex items-center justify-center">
                                                         <span className="text-white font-bold font-[Lexend]">{session.overallScore}</span>
                                                     </div>
                                                     <div>

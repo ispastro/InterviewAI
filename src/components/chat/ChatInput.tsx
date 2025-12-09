@@ -63,7 +63,7 @@ export function ChatInput({ onSend, disabled = false, placeholder = 'Type your a
                     disabled={disabled || !message.trim()}
                     className={cn(
                         'flex-shrink-0 w-10 h-10 rounded-[12px] flex items-center justify-center',
-                        'bg-[#2563EB] hover:bg-[#1D4ED8]',
+                        'bg-[#0D9488] hover:bg-[#0F766E]',
                         'text-white transition-all duration-200',
                         'disabled:opacity-50 disabled:cursor-not-allowed'
                     )}
