@@ -12,15 +12,22 @@ Engineering decisions:
 """
 
 import asyncio
+import sys
+import os
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
+# Add the app directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 # Import our models and configuration
 from app.config import settings
 from app.database import Base
+# Import all models to ensure they're registered
+from app.models import User, Interview, Turn, Feedback
 
 # This is the Alembic Config object
 config = context.config

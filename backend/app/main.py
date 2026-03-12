@@ -24,6 +24,7 @@ from app.config import settings, validate_configuration
 from app.database import startup_database, shutdown_database, check_database_connection
 from app.core.error_handlers import register_exception_handlers
 from app.modules.auth.router import router as auth_router
+from app.modules.interviews.router import router as interviews_router
 
 
 # ============================================================
@@ -104,6 +105,7 @@ register_exception_handlers(app)
 # ROUTER REGISTRATION
 # ============================================================
 app.include_router(auth_router)
+app.include_router(interviews_router)
 
 
 # ============================================================
