@@ -34,21 +34,34 @@ from app.config import settings
 # ============================================================
 # The engine manages the connection pool to PostgreSQL.
 # It's created once at module import and reused throughout the app.
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    
-    # Connection pool settings
-    pool_size=10,                    # Number of connections to maintain
-    max_overflow=20,                 # Additional connections when pool is full
-    pool_pre_ping=True,              # Validate connections before use
-    pool_recycle=3600,               # Recycle connections after 1 hour
-    
-    # Logging
-    echo=settings.database_echo,     # Log SQL queries in development
-    
-    # Performance
-    future=True,                     # Use SQLAlchemy 2.0 style
-)
+
+# Check if we're using SQLite (for testing) or PostgreSQL (for production)
+is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
+if is_sqlite:
+    # SQLite configuration - no connection pooling
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        echo=settings.database_echo,     # Log SQL queries in development
+        future=True,                     # Use SQLAlchemy 2.0 style
+    )
+else:
+    # PostgreSQL configuration - with connection pooling
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        
+        # Connection pool settings
+        pool_size=10,                    # Number of connections to maintain
+        max_overflow=20,                 # Additional connections when pool is full
+        pool_pre_ping=True,              # Validate connections before use
+        pool_recycle=3600,               # Recycle connections after 1 hour
+        
+        # Logging
+        echo=settings.database_echo,     # Log SQL queries in development
+        
+        # Performance
+        future=True,                     # Use SQLAlchemy 2.0 style
+    )
 
 
 # ============================================================
@@ -150,7 +163,7 @@ async def create_tables():
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    print("✅ Database tables created successfully")
+    print("Database tables created successfully")
 
 
 async def drop_tables():
@@ -172,13 +185,14 @@ async def check_database_connection():
     Used in health checks and startup validation.
     """
     try:
+        from sqlalchemy import text
         async with AsyncSessionLocal() as session:
             # Simple query to test connection
-            result = await session.execute("SELECT 1")
+            result = await session.execute(text("SELECT 1"))
             result.scalar()
         return True
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")
+        print(f"Database connection failed: {e}")
         return False
 
 
@@ -195,7 +209,7 @@ async def startup_database():
     if not await check_database_connection():
         raise RuntimeError("Failed to connect to database")
     
-    print(f"✅ Database connected: {settings.DATABASE_URL.split('@')[0]}@***")
+    print("Database connected: {}".format(settings.DATABASE_URL.split('@')[0] + "@***"))
 
 
 async def shutdown_database():

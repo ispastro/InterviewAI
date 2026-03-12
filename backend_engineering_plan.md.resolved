@@ -1,0 +1,884 @@
+# InterviewMe — Ultimate Backend Engineering Plan
+
+> A phased, production-grade backend engineering blueprint for building an AI-powered mock interview platform on a $0 budget. This document is your roadmap — every module, every endpoint, every design decision is documented before a single line of code is written.
+
+---
+
+## Stack Summary (Locked In)
+
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| **Runtime** | Python 3.12 + FastAPI | Async-native, WebSocket support, type hints |
+| **Database** | PostgreSQL (Heroku) | Relational, JSONB support, battle-tested |
+| **ORM** | SQLAlchemy 2.0 + Alembic | Async support, migrations |
+| **LLM** | Groq API (Llama 3.3 70B) | Free tier, ~200ms first-token, streaming |
+| **Auth** | JWT-based (issued by NextAuth.js on frontend) | Stateless, simple validation on backend |
+| **WebSocket** | FastAPI native WebSocket | Real-time interview sessions |
+| **Hosting** | Heroku (GitHub Student Pack) | No cold starts, Postgres included |
+| **Caching** | In-memory (dict) for MVP → Redis later | Keep it simple |
+
+---
+
+## Project Structure
+
+```
+backend/
+├── app/
+│   ├── main.py                      # FastAPI app entry, CORS, lifespan
+│   ├── config.py                    # Pydantic Settings, env vars
+│   ├── database.py                  # Async SQLAlchemy engine + session factory
+│   │
+│   ├── models/                      # SQLAlchemy ORM models
+│   │   ├── __init__.py
+│   │   ├── user.py                  # User model
+│   │   ├── interview.py             # Interview + Turn models
+│   │   └── feedback.py              # Feedback model
+│   │
+│   ├── schemas/                     # Pydantic request/response schemas
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── interview.py
+│   │   ├── feedback.py
+│   │   └── websocket.py             # WS message schemas
+│   │
+│   ├── modules/
+│   │   ├── auth/
+│   │   │   ├── router.py            # Auth verification endpoints
+│   │   │   ├── service.py           # JWT validation logic
+│   │   │   └── dependencies.py      # get_current_user dependency
+│   │   │
+│   │   ├── interviews/
+│   │   │   ├── router.py            # REST endpoints (create, list, get)
+│   │   │   ├── service.py           # Interview CRUD operations
+│   │   │   ├── ws_handler.py        # WebSocket interview session handler
+│   │   │   └── session_manager.py   # In-memory session state management
+│   │   │
+│   │   ├── ai/
+│   │   │   ├── llm_service.py       # Groq client, streaming completions
+│   │   │   ├── prompts.py           # All system prompts & templates
+│   │   │   ├── cv_processor.py      # CV text → structured analysis
+│   │   │   ├── jd_processor.py      # JD text → structured analysis
+│   │   │   └── question_engine.py   # Interview phase logic + question gen
+│   │   │
+│   │   └── feedback/
+│   │       ├── router.py            # Feedback endpoints
+│   │       ├── service.py           # Feedback generation & storage
+│   │       └── evaluator.py         # Per-turn + overall evaluation logic
+│   │
+│   ├── core/
+│   │   ├── exceptions.py            # Custom exception classes
+│   │   ├── error_handlers.py        # Global exception handlers
+│   │   ├── middleware.py            # Logging, timing, rate limiting
+│   │   └── security.py             # JWT decode, password utils
+│   │
+│   └── utils/
+│       ├── text_extraction.py       # PDF/DOCX text extraction
+│       └── helpers.py               # Misc utilities
+│
+├── alembic/                         # Database migrations
+│   ├── alembic.ini
+│   └── versions/
+│
+├── tests/                           # Test suite
+│   ├── conftest.py
+│   ├── test_auth.py
+│   ├── test_interviews.py
+│   ├── test_ai.py
+│   └── test_websocket.py
+│
+├── requirements.txt
+├── Procfile                         # Heroku deployment
+├── runtime.txt                      # Python version for Heroku
+└── .env.example
+```
+
+---
+
+## Phase 1: Foundation & Infrastructure
+
+> **Goal:** A running FastAPI server with database, auth, and project scaffolding. No AI, no interviews yet — just the bones.
+
+### 1.1 — Project Init & Configuration
+
+**What:** Set up the FastAPI project with proper configuration management.
+
+**`app/config.py`** — Centralized config using Pydantic Settings:
+```python
+class Settings(BaseSettings):
+    # Database
+    DATABASE_URL: str
+    
+    # Auth
+    JWT_SECRET: str               # Shared with NextAuth.js
+    JWT_ALGORITHM: str = "HS256"
+    
+    # Groq
+    GROQ_API_KEY: str
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    
+    # App
+    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    ENVIRONMENT: str = "development"
+    
+    model_config = SettingsConfigDict(env_file=".env")
+```
+
+**Key decisions:**
+- All secrets via environment variables, never hardcoded
+- Pydantic validates config at startup — if `GROQ_API_KEY` is missing, the app won't start (fail fast)
+- One `.env.example` file committed to git showing required variables
+
+---
+
+### 1.2 — Database Layer
+
+**What:** Async SQLAlchemy 2.0 setup with Alembic migrations.
+
+**`app/database.py`** — Engine, session factory, and base model:
+- Use `create_async_engine` with `asyncpg` driver
+- Session dependency via `async_generator` pattern for FastAPI
+- `Base` declarative class with common fields (id, created_at, updated_at)
+
+**Models — The Schema:**
+
+#### `User` Model
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID (PK) | Generated server-side |
+| `email` | String, unique, indexed | From NextAuth JWT |
+| `name` | String, nullable | Display name |
+| `oauth_provider` | String, nullable | "google" or null |
+| `created_at` | DateTime | Auto-set |
+| `updated_at` | DateTime | Auto-updated |
+
+#### `Interview` Model
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID (PK) | |
+| `user_id` | UUID (FK → users) | |
+| `status` | Enum | `PENDING`, `PROCESSING_CV`, `READY`, `IN_PROGRESS`, `COMPLETED`, `FAILED` |
+| `cv_raw_text` | Text | Original extracted text |
+| `cv_analysis` | JSONB | Structured CV data (skills, experience, etc.) |
+| `jd_raw_text` | Text | Original job description text |
+| `jd_analysis` | JSONB | Structured JD data (requirements, level, etc.) |
+| `interview_config` | JSONB | Phase config, difficulty, question count targets |
+| `target_role` | String | Extracted from JD |
+| `target_company` | String, nullable | If specified |
+| `created_at` | DateTime | |
+| `completed_at` | DateTime, nullable | |
+
+#### `Turn` Model
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID (PK) | |
+| `interview_id` | UUID (FK → interviews) | |
+| `turn_number` | Integer | Sequential: 1, 2, 3... |
+| `phase` | Enum | `INTRO`, `BEHAVIORAL`, `TECHNICAL`, `DEEP_DIVE`, `CLOSING` |
+| `ai_question` | Text | The AI's question |
+| `user_answer` | Text | Transcribed answer from user |
+| `evaluation` | JSONB | Per-turn scoring: relevance, depth, clarity |
+| `duration_seconds` | Float, nullable | How long the user took to answer |
+| `created_at` | DateTime | |
+
+#### `Feedback` Model
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID (PK) | |
+| `interview_id` | UUID (FK → interviews), unique | One feedback per interview |
+| `overall_score` | Float | 0-100 |
+| `strengths` | JSONB | List of identified strengths |
+| `weaknesses` | JSONB | List of identified weaknesses |
+| `suggestions` | JSONB | Actionable improvement items |
+| `phase_scores` | JSONB | Score breakdown by phase |
+| `detailed_analysis` | Text | Full narrative feedback |
+| `created_at` | DateTime | |
+
+**Migration strategy:**
+- Alembic `autogenerate` for schema changes
+- Each migration is a separate version file
+- Always test migrations up AND down
+
+---
+
+### 1.3 — Auth Module
+
+**What:** JWT validation middleware for FastAPI. Auth is NOT built here — NextAuth.js on the frontend handles login/signup and issues JWTs. The backend only **validates** them.
+
+**The flow:**
+```
+1. User logs in via NextAuth.js (Google OAuth or email)
+2. NextAuth issues a JWT signed with JWT_SECRET
+3. Frontend sends JWT in Authorization header: "Bearer <token>"
+4. FastAPI dependency decodes + validates the JWT
+5. Extracts user_id and email
+6. Auto-creates user in DB if first visit (upsert pattern)
+```
+
+**`app/modules/auth/dependencies.py`** — The core dependency:
+```python
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    """
+    1. Decode JWT
+    2. Extract email + sub (user ID)  
+    3. Upsert user in DB
+    4. Return User object
+    """
+```
+
+This is injected into every protected endpoint via `Depends(get_current_user)`.
+
+**Endpoints:**
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/auth/me` | Return current user profile |
+| `PUT` | `/api/auth/me` | Update user profile (name) |
+
+---
+
+### 1.4 — Error Handling & Middleware
+
+**What:** Centralized error handling so the API is consistent and debuggable.
+
+**Custom exceptions:**
+```python
+class AppError(Exception):          # Base
+class NotFoundError(AppError):      # 404
+class ValidationError(AppError):    # 422
+class AuthError(AppError):          # 401
+class RateLimitError(AppError):     # 429
+class AIServiceError(AppError):     # 502 (Groq down)
+```
+
+**Global handlers** register these to return consistent JSON:
+```json
+{
+    "error": "not_found",
+    "message": "Interview not found",
+    "detail": null
+}
+```
+
+**Middleware:**
+- **Request ID** — UUID per request, attached to all logs
+- **Timing** — Log response time for every endpoint
+- **CORS** — Configured for Vercel frontend domain
+
+---
+
+### Phase 1 Deliverable Checklist
+- [ ] FastAPI app boots and responds to health check (`GET /health`)
+- [ ] PostgreSQL connected with async SQLAlchemy
+- [ ] All 4 models created, Alembic migration runs clean
+- [ ] JWT validation works — protected endpoints return 401 without token
+- [ ] User upsert creates new users on first auth
+- [ ] Error handlers return consistent JSON for all error types
+- [ ] CORS configured for frontend
+- [ ] Heroku Procfile + deployment config ready
+
+---
+
+## Phase 2: CV/JD Processing & Interview Creation
+
+> **Goal:** Users can upload a CV and job description, the backend processes them with the LLM, and creates a ready-to-start interview session.
+
+### 2.1 — Text Extraction
+
+**What:** Extract text from uploaded files (PDF, DOCX) or accept raw pasted text.
+
+**Supported inputs:**
+| Format | Library | Notes |
+|--------|---------|-------|
+| PDF | `PyPDF2` or `pdfplumber` | `pdfplumber` handles tables better |
+| DOCX | `python-docx` | Standard library |
+| Plain text | None | Direct pass-through |
+
+**`app/utils/text_extraction.py`:**
+- `extract_text(file: UploadFile) -> str` — Auto-detects format, extracts text
+- Validates file size (max 5MB), file type, and extracted content length
+- Raises `ValidationError` if CV is empty or unreadable
+
+---
+
+### 2.2 — CV Analysis (LLM Processing)
+
+**What:** Take raw CV text and extract structured data using Groq.
+
+**`app/modules/ai/cv_processor.py`:**
+
+**Input:** Raw CV text (string)
+
+**Output:** Structured JSON:
+```json
+{
+    "candidate_name": "...",
+    "years_of_experience": 3,
+    "current_role": "Junior Software Engineer",
+    "skills": {
+        "technical": ["Python", "React", "PostgreSQL"],
+        "soft": ["communication", "teamwork"]
+    },
+    "experience": [
+        {
+            "role": "Software Engineer",
+            "company": "Acme Corp",
+            "duration": "2 years",
+            "key_achievements": ["Led migration to microservices", "..."]
+        }
+    ],
+    "education": [...],
+    "projects": [...],
+    "notable_points": ["Published research paper on ML", "..."],
+    "potential_gaps": ["No cloud experience mentioned", "..."]
+}
+```
+
+**Why structured?** This goes into `interview.cv_analysis` (JSONB column) and gets injected into interview prompts. Structured = queryable + smaller token footprint per turn.
+
+**Token budget:** ~500-800 tokens for the system prompt + raw CV, ~300-400 tokens for the response. One Groq call, no streaming needed here (it's a preprocessing step).
+
+---
+
+### 2.3 — JD Analysis (LLM Processing)
+
+**`app/modules/ai/jd_processor.py`:**
+
+**Input:** Raw job description text
+
+**Output:** Structured JSON:
+```json
+{
+    "role_title": "Senior Backend Engineer",
+    "company": "Tech Corp",
+    "seniority_level": "senior",
+    "required_skills": ["Python", "System Design", "AWS"],
+    "nice_to_have": ["Kubernetes", "GraphQL"],
+    "key_responsibilities": ["Design APIs", "Mentor juniors"],
+    "interview_focus_areas": ["system design", "leadership", "Python deep dive"],
+    "culture_signals": ["fast-paced", "startup", "remote-first"]
+}
+```
+
+---
+
+### 2.4 — Interview Creation Endpoint
+
+**`app/modules/interviews/router.py`:**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/api/interviews` | Create new interview |
+| `GET` | `/api/interviews` | List user's interviews |
+| `GET` | `/api/interviews/{id}` | Get interview details |
+| `DELETE` | `/api/interviews/{id}` | Delete interview + related data |
+
+**Create interview flow:**
+
+```mermaid
+flowchart TD
+    A["POST /api/interviews
+    {cv_file, jd_text}"] --> B[Extract text from CV]
+    B --> C[Validate: CV has content]
+    C --> D["Create Interview record
+    status=PROCESSING_CV"]
+    D --> E[LLM: Analyze CV → structured JSON]
+    E --> F[LLM: Analyze JD → structured JSON]
+    F --> G[LLM: Generate gap analysis + focus areas]
+    G --> H["Update interview:
+    cv_analysis, jd_analysis
+    status=READY"]
+    H --> I["Return interview object
+    {id, status, target_role}"]
+```
+
+**Design decision — Sync vs Async processing:**
+
+For MVP, process CV/JD **synchronously** in the POST request. The full pipeline takes ~3-5 seconds on Groq (it's fast). This keeps the architecture simple. For scale, you'd move this to a background task (Celery) and poll for status.
+
+If Groq takes longer than expected, set a **15-second timeout** and return status `PROCESSING_CV` so the frontend can poll.
+
+---
+
+### Phase 2 Deliverable Checklist
+- [ ] File upload endpoint accepts PDF, DOCX, plain text
+- [ ] Text extraction works for all formats
+- [ ] CV analysis returns consistent structured JSON from Groq
+- [ ] JD analysis returns consistent structured JSON from Groq
+- [ ] Interview record created with status transitions
+- [ ] List/get/delete endpoints work with auth
+- [ ] Error handling for: bad files, Groq failures, empty content
+
+---
+
+## Phase 3: The Interview Engine (The Hard Part)
+
+> **Goal:** Real-time WebSocket-based interview session where the AI asks questions, receives answers, adapts, and progresses through phases.
+
+### 3.1 — WebSocket Connection Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant C as Client (Browser)
+    participant WS as WebSocket Handler
+    participant SM as Session Manager
+    participant AI as Question Engine
+    participant DB as PostgreSQL
+
+    C->>WS: Connect /ws/interview/{interview_id}?token=xxx
+    WS->>WS: Validate JWT from query param
+    WS->>DB: Load interview (must be status=READY)
+    WS->>SM: Create session state in memory
+    WS->>C: {type: "connected", interview_id, config}
+    
+    loop Interview Loop
+        WS->>AI: Generate next question (streaming)
+        AI-->>WS: Question tokens (streaming)
+        WS-->>C: {type: "ai_question", text: "...", done: false}
+        WS-->>C: {type: "ai_question", text: "...", done: true, phase: "technical"}
+        Note over C: Browser speaks question via TTS
+        Note over C: User speaks answer via STT
+        C->>WS: {type: "user_answer", text: "I would approach this by..."}
+        WS->>DB: Save Turn (async)
+        WS->>AI: Evaluate answer + decide next action
+    end
+
+    C->>WS: {type: "end_interview"} OR phase=CLOSING completed
+    WS->>DB: Update interview status=COMPLETED
+    WS->>C: {type: "interview_complete", feedback_pending: true}
+    WS-->>C: disconnect
+```
+
+---
+
+### 3.2 — WebSocket Message Protocol
+
+All messages are JSON. Both directions.
+
+**Client → Server messages:**
+```typescript
+// User's spoken answer (transcribed via Web Speech API in browser)
+{ type: "user_answer", text: "I have 3 years of experience..." }
+
+// User requests to skip current question
+{ type: "skip_question" }
+
+// User ends interview early
+{ type: "end_interview" }
+
+// Heartbeat / keepalive
+{ type: "ping" }
+```
+
+**Server → Client messages:**
+```typescript
+// Connection established
+{ type: "connected", interview_id: "uuid", session_config: {...} }
+
+// AI question (streamed in chunks)
+{ type: "ai_question", text: "partial text...", done: false, phase: "technical" }
+{ type: "ai_question", text: "full question text", done: true, phase: "technical", turn_number: 3 }
+
+// AI acknowledgment before asking next question
+{ type: "ai_thinking" }
+
+// Phase transition notification
+{ type: "phase_change", from: "behavioral", to: "technical" }
+
+// Interview complete
+{ type: "interview_complete", total_turns: 8, feedback_status: "generating" }
+
+// Error
+{ type: "error", message: "...", recoverable: true }
+
+// Heartbeat response
+{ type: "pong" }
+```
+
+---
+
+### 3.3 — Session State Machine
+
+**`app/modules/interviews/session_manager.py`:**
+
+The session state lives **in-memory** during the interview. It's saved to DB after every turn for crash recovery.
+
+```python
+class InterviewSession:
+    """Core state machine for a live interview."""
+    
+    # Identity
+    interview_id: UUID
+    user_id: UUID
+    
+    # Analysis (loaded once from DB at session start)
+    cv_analysis: dict           # Structured CV data
+    jd_analysis: dict           # Structured JD data
+    
+    # Phase management
+    current_phase: InterviewPhase   # INTRO → BEHAVIORAL → TECHNICAL → DEEP_DIVE → CLOSING
+    phase_config: dict              # How many questions per phase, targets
+    
+    # Turn tracking  
+    turns: list[TurnRecord]     # All Q&A pairs so far
+    current_turn: int           # Turn counter
+    
+    # Adaptive state
+    difficulty_level: float     # 0.0 (easy) → 1.0 (hard), adjusts per answer
+    identified_strengths: list  # Running list, fed back to LLM
+    identified_weaknesses: list # Running list, used to probe deeper
+    
+    # Methods
+    def get_next_phase() -> InterviewPhase
+    def should_transition_phase() -> bool
+    def get_conversation_summary() -> str   # Compressed context for LLM
+    def to_db_state() -> dict               # Serialize for crash recovery
+    def from_db_state(state: dict)          # Restore from DB
+```
+
+**Phase transition rules:**
+
+| Phase | Entry Condition | Exit Condition | Typical Questions |
+|-------|----------------|----------------|-------------------|
+| `INTRO` | Session starts | After 1 question | "Tell me about yourself" |
+| `BEHAVIORAL` | INTRO complete | After 2-3 questions | STAR-format situational |
+| `TECHNICAL` | BEHAVIORAL complete | After 3-4 questions | Domain-specific from JD |
+| `DEEP_DIVE` | TECHNICAL complete | After 2-3 questions | Follow-ups on weak/strong areas |
+| `CLOSING` | DEEP_DIVE complete | After 1 question | "Do you have questions for me?" |
+
+**Total: 9-12 questions per interview (~20-25 minutes)**
+
+---
+
+### 3.4 — Question Engine
+
+**`app/modules/ai/question_engine.py`:**
+
+This is the brain. Each turn, it:
+1. Receives the user's answer to the previous question
+2. Evaluates the answer quality (quick inline assessment)
+3. Decides: follow-up probe, next question, or phase transition
+4. Generates the next question via Groq (streaming)
+
+**The system prompt architecture (per turn):**
+```
+SYSTEM PROMPT:
+├── Role definition (interviewer persona)
+├── CV summary (compressed, ~200 tokens)
+├── JD summary (compressed, ~150 tokens)
+├── Current phase + phase-specific instructions
+├── Conversation summary (last 3-4 turns only, not all)
+├── Difficulty directive based on current level
+├── Evaluation criteria for this phase
+└── Output format instructions
+
+USER MESSAGE:
+└── "The candidate just answered: {answer_text}"
+     OR "Begin the interview" (for first turn)
+```
+
+**Context window management — Critical for Groq's free tier:**
+
+You have ~6,000 tokens/minute. You need to be efficient:
+
+| Component | Token Budget |
+|-----------|-------------|
+| System prompt (fixed parts) | ~300 tokens |
+| CV summary | ~200 tokens |
+| JD summary | ~150 tokens |
+| Conversation history (last 3 turns) | ~400 tokens |
+| Current answer | ~200 tokens |
+| AI response | ~150 tokens |
+| **Total per turn** | **~1,400 tokens** |
+
+At 2-3 turns per minute, that's 2,800-4,200 tokens/minute — well within Groq's 6K limit.
+
+**Key: Use a sliding window for conversation history.** Don't include all previous turns — only the last 3. For older turns, include a 1-line summary. This keeps tokens bounded regardless of interview length.
+
+---
+
+### 3.5 — Turn Evaluation (Inline)
+
+Each answer gets a quick inline evaluation **in the same LLM call** that generates the next question. The LLM response format:
+
+```json
+{
+    "evaluation": {
+        "relevance": 7,
+        "depth": 6,
+        "clarity": 8,
+        "key_observations": "Mentioned specific metrics but lacked STAR format"
+    },
+    "difficulty_adjustment": 0.1,
+    "phase_action": "continue",
+    "next_question": "You mentioned scaling the database. Can you walk me through the specific indexing strategy you used?"
+}
+```
+
+> [!IMPORTANT]
+> **The evaluation and next question come from ONE LLM call, not two.** This halves your Groq usage per turn. The LLM evaluates the answer AND generates the next question in a single structured response.
+
+---
+
+### 3.6 — WebSocket Error Handling
+
+| Scenario | Detection | Recovery |
+|----------|-----------|----------|
+| Client disconnects | `WebSocketDisconnect` exception | Save session state to DB, allow reconnect within 5 min |
+| Groq timeout (>10s) | `asyncio.timeout` | Retry once, then send text fallback: "Let me rephrase that question..." |
+| Groq rate limit | 429 response | Wait 2s, retry. If still limited, pause interview with message |
+| Invalid message format | Pydantic validation | Send `{type: "error", message: "...", recoverable: true}` |
+| Server crash | Session state in DB | On reconnect, restore from `interview.session_state` JSONB column |
+
+**Reconnection protocol:**
+```
+Client reconnects → sends {type: "reconnect", interview_id: "..."}
+Server checks: session_state exists in DB? Interview not expired (< 5 min ago)?
+  Yes → Restore state, send last AI question, resume
+  No  → Send {type: "error", message: "Session expired", recoverable: false}
+```
+
+---
+
+### Phase 3 Deliverable Checklist
+- [ ] WebSocket connects with JWT auth
+- [ ] Session state machine manages phases correctly
+- [ ] Question engine generates phase-appropriate questions via Groq
+- [ ] Streaming responses work (chunked messages to client)
+- [ ] Per-turn evaluation included in LLM response
+- [ ] Turns saved to DB after each exchange
+- [ ] Difficulty adapts based on answer quality
+- [ ] Phase transitions happen at right times
+- [ ] Disconnect → reconnect works within 5 min window
+- [ ] Groq errors handled gracefully (timeout, rate limit)
+
+---
+
+## Phase 4: Feedback Generation
+
+> **Goal:** After interview completion, generate a comprehensive feedback report and store it.
+
+### 4.1 — Feedback Generation Pipeline
+
+**Trigger:** Interview status changes to `COMPLETED` (either all phases done or user ends early).
+
+**`app/modules/feedback/evaluator.py`:**
+
+```mermaid
+flowchart TD
+    A[Interview Completed] --> B[Load all turns from DB]
+    B --> C[Build evaluation context]
+    C --> D["LLM Call: Generate comprehensive feedback
+    Input: all turns + evaluations + CV + JD"]
+    D --> E[Parse structured feedback response]
+    E --> F[Save Feedback record to DB]
+    F --> G["Update interview status
+    → COMPLETED_WITH_FEEDBACK"]
+    G --> H[Notify client via WS or polling]
+```
+
+**The feedback prompt context:**
+```
+SYSTEM: You are a senior interview coach...
+
+CONTEXT:
+- Role: {target_role} at {company}
+- Candidate profile: {cv_summary}
+- Job requirements: {jd_summary}
+
+INTERVIEW TRANSCRIPT:
+Turn 1 (INTRO): Q: ... A: ... Eval: {scores}
+Turn 2 (BEHAVIORAL): Q: ... A: ... Eval: {scores}
+...
+
+GENERATE:
+1. Overall score (0-100)
+2. Top 3 strengths with evidence
+3. Top 3 weaknesses with evidence
+4. Specific improvement suggestions
+5. Phase-by-phase breakdown
+6. Detailed narrative analysis
+```
+
+**Important:** This is the ONE LLM call where you include the full transcript. Budget ~3,000-4,000 tokens for input. This is fine since it's a one-time call per interview (not per-turn).
+
+### 4.2 — Feedback Response Structure
+
+```json
+{
+    "overall_score": 72,
+    "summary": "Solid technical foundation with clear communication. Needs improvement in structuring behavioral answers and quantifying impact.",
+    "strengths": [
+        {
+            "area": "Technical Knowledge",
+            "score": 85,
+            "evidence": "Correctly explained database indexing strategies and their tradeoffs",
+            "turns_referenced": [4, 5]
+        }
+    ],
+    "weaknesses": [
+        {
+            "area": "Behavioral Answers",
+            "score": 55,
+            "evidence": "Answers lacked STAR format — situation and result were often missing",
+            "turns_referenced": [2, 3]
+        }
+    ],
+    "suggestions": [
+        {
+            "priority": "high",
+            "area": "Behavioral Questions",
+            "action": "Practice structuring answers using the STAR method",
+            "example": "Instead of 'I fixed the bug', say 'When our production system went down (S), I was responsible for debugging (T), I analyzed the logs and found a memory leak (A), which reduced downtime by 40% (R)'"
+        }
+    ],
+    "phase_scores": {
+        "intro": 80,
+        "behavioral": 55,
+        "technical": 85,
+        "deep_dive": 70,
+        "closing": 75
+    },
+    "detailed_analysis": "Full narrative paragraph..."
+}
+```
+
+### 4.3 — Feedback Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/interviews/{id}/feedback` | Get feedback for an interview |
+| `POST` | `/api/interviews/{id}/feedback/regenerate` | Re-generate feedback (if user wants) |
+
+---
+
+### Phase 4 Deliverable Checklist
+- [ ] Feedback generated automatically on interview completion
+- [ ] Structured JSON stored in `feedback` table
+- [ ] Feedback endpoint returns full report
+- [ ] Handles edge case: interview ended early (partial feedback)
+- [ ] Regeneration works (deletes old, creates new)
+
+---
+
+## Phase 5: API Hardening & Deployment
+
+> **Goal:** Production-ready API with proper security, rate limiting, logging, and deployment.
+
+### 5.1 — Security
+
+| Concern | Implementation |
+|---------|---------------|
+| JWT validation | Verify signature, check expiry, validate issuer |
+| Input sanitization | Pydantic schemas validate all inputs |
+| File upload limits | 5MB max, only PDF/DOCX/TXT |
+| Rate limiting | In-memory counter: 10 interviews/user/day, 30 RPM on WebSocket |
+| CORS | Whitelist frontend domain only |
+| SQL injection | SQLAlchemy ORM (parameterized queries) |
+| Sensitive data logging | Never log CV content, JWT tokens, or full transcripts |
+
+### 5.2 — API Documentation
+
+FastAPI auto-generates OpenAPI docs. Ensure:
+- All endpoints have docstrings
+- All schemas have `Field(description="...")`
+- Response models defined for every endpoint
+- Accessible at `/docs` (Swagger UI)
+
+### 5.3 — Health & Monitoring
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | Basic liveness check |
+| `GET /health/ready` | Checks DB + Groq connectivity |
+
+Structured logging with `structlog`:
+```json
+{"timestamp": "...", "level": "info", "request_id": "uuid", "endpoint": "/api/interviews", "duration_ms": 234, "user_id": "uuid"}
+```
+
+### 5.4 — Heroku Deployment
+
+**`Procfile`:**
+```
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+**`runtime.txt`:**
+```
+python-3.12.x
+```
+
+**Environment variables to set on Heroku:**
+```
+DATABASE_URL          → Auto-set by Heroku Postgres add-on
+GROQ_API_KEY          → From Groq console
+JWT_SECRET            → Shared with NextAuth.js
+CORS_ORIGINS          → Your Vercel domain
+ENVIRONMENT           → production
+```
+
+**Deployment flow:**
+```
+git push heroku main → Heroku builds → runs migrations → starts uvicorn
+```
+
+---
+
+### Phase 5 Deliverable Checklist
+- [ ] Rate limiting works (returns 429 when exceeded)
+- [ ] Health checks pass
+- [ ] Structured logging configured
+- [ ] OpenAPI docs accessible and accurate
+- [ ] Heroku deployment succeeds
+- [ ] Environment variables configured
+- [ ] Database migrations run on deploy
+- [ ] Frontend can connect to production backend
+
+---
+
+## Dependency Map (Build Order)
+
+```mermaid
+flowchart LR
+    P1["Phase 1
+    Foundation"] --> P2["Phase 2
+    CV/JD Processing"]
+    P2 --> P3["Phase 3
+    Interview Engine"]
+    P3 --> P4["Phase 4
+    Feedback"]
+    P1 --> P5["Phase 5
+    Hardening"]
+    P4 --> P5
+    
+    style P3 fill:#ff6b6b,color:#fff
+    style P3 stroke:#ff6b6b
+```
+
+> Phase 3 (red) is the critical path — it's the hardest, takes the longest, and is the core product. Phases 1/2 are prerequisites. Phase 4 depends on 3. Phase 5 runs in parallel toward the end.
+
+---
+
+## Estimated Timeline
+
+| Phase | Duration | Complexity |
+|-------|----------|------------|
+| Phase 1: Foundation | 3-4 days | Medium — boilerplate but critical |
+| Phase 2: CV/JD Processing | 2-3 days | Medium — mostly prompt engineering |
+| Phase 3: Interview Engine | 5-7 days | **High** — WebSocket + state machine + streaming |
+| Phase 4: Feedback | 2-3 days | Medium — prompt engineering + storage |
+| Phase 5: Hardening | 2-3 days | Low — mechanical but important |
+| **Total** | **~2-3 weeks** | |
+
+---
+
+## Key Engineering Principles Throughout
+
+1. **Fail fast, fail loud** — Validate inputs at the boundary. If Groq is down, tell the user immediately.
+2. **One LLM call, not two** — Combine evaluation + question generation into a single call.
+3. **Sliding window context** — Never dump the full transcript into every prompt.
+4. **State in DB, speed in memory** — Session state lives in-memory for speed, backed up to DB for recovery.
+5. **Structured over raw** — Store JSONB, not raw text. It's queryable and cheaper to prompt with.
+6. **Async all the way** — FastAPI async endpoints, async SQLAlchemy, async Groq client.

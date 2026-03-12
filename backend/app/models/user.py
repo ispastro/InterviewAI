@@ -77,16 +77,16 @@ class User(Base):
     # ============================================================
     # RELATIONSHIPS
     # ============================================================
-    # Note: We use back_populates instead of backref for explicit control
+    # Note: We'll add interview relationships in Phase 2
+    # when we implement the Interview model
     
-    # One user can have many interviews
-    interviews: Mapped[List["Interview"]] = relationship(
-        "Interview",
-        back_populates="user",
-        cascade="all, delete-orphan",  # Delete interviews when user is deleted
-        lazy="select",  # Load interviews only when accessed
-        order_by="Interview.created_at.desc()"  # Most recent first
-    )
+    # interviews: Mapped[List["Interview"]] = relationship(
+    #     "Interview",
+    #     back_populates="user",
+    #     cascade="all, delete-orphan",
+    #     lazy="select",
+    #     order_by="Interview.created_at.desc()"
+    # )
     
     # ============================================================
     # INDEXES FOR PERFORMANCE

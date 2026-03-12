@@ -20,27 +20,27 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'app'))
 
 async def test_configuration():
     """Test configuration loading and validation"""
-    print("🧪 Testing configuration...")
+    print("Testing configuration...")
     
     try:
         from app.config import settings, validate_configuration
         
         # Test that settings load
-        print(f"   ✅ Settings loaded: {settings.ENVIRONMENT}")
+        print(f"   Settings loaded: {settings.ENVIRONMENT}")
         
         # Test validation
         validate_configuration()
-        print("   ✅ Configuration validation passed")
+        print("   Configuration validation passed")
         
         return True
     except Exception as e:
-        print(f"   ❌ Configuration test failed: {e}")
+        print(f"   Configuration test failed: {e}")
         return False
 
 
 async def test_database():
     """Test database connection and model creation"""
-    print("🧪 Testing database...")
+    print("Testing database...")
     
     try:
         from app.database import check_database_connection, create_tables
@@ -48,55 +48,58 @@ async def test_database():
         # Test connection
         connected = await check_database_connection()
         if not connected:
-            print("   ❌ Database connection failed")
+            print("   Database connection failed")
             return False
         
-        print("   ✅ Database connection successful")
+        print("   Database connection successful")
         
         # Test table creation
         await create_tables()
-        print("   ✅ Database tables created")
+        print("   Database tables created")
         
         return True
     except Exception as e:
-        print(f"   ❌ Database test failed: {e}")
+        print(f"   Database test failed: {e}")
         return False
 
 
 async def test_auth():
     """Test JWT authentication"""
-    print("🧪 Testing authentication...")
+    print("Testing authentication...")
     
     try:
         from app.modules.auth.dependencies import create_test_token, decode_jwt_token
         from app.config import settings
         
         if not settings.is_development:
-            print("   ⚠️  Skipping auth test (not in development mode)")
+            print("   Skipping auth test (not in development mode)")
             return True
         
         # Create test token
         token = create_test_token("test@example.com", "Test User")
-        print("   ✅ Test token created")
+        print("   Test token created")
         
         # Decode token
         payload = decode_jwt_token(token)
         assert payload["email"] == "test@example.com"
-        print("   ✅ Token validation successful")
+        print("   Token validation successful")
         
         return True
     except Exception as e:
-        print(f"   ❌ Auth test failed: {e}")
+        print(f"   Auth test failed: {e}")
         return False
 
 
 async def test_models():
     """Test database models"""
-    print("🧪 Testing models...")
+    print("Testing models...")
     
     try:
         from app.models.user import User
-        from app.database import AsyncSessionLocal
+        from app.database import AsyncSessionLocal, create_tables
+        
+        # Create tables first
+        await create_tables()
         
         # Test user creation
         async with AsyncSessionLocal() as session:
@@ -111,7 +114,7 @@ async def test_models():
             await session.commit()
             await session.refresh(user)
             
-            print(f"   ✅ User created: {user.id}")
+            print(f"   User created: {user.id}")
             
             # Test user methods
             assert user.display_name == "Test User"
@@ -121,17 +124,17 @@ async def test_models():
             assert "id" in user_dict
             assert "email" in user_dict
             
-            print("   ✅ User methods working")
+            print("   User methods working")
         
         return True
     except Exception as e:
-        print(f"   ❌ Models test failed: {e}")
+        print(f"   Models test failed: {e}")
         return False
 
 
 async def main():
     """Run all Phase 1 tests"""
-    print("🚀 Running Phase 1 Tests\n")
+    print("Running Phase 1 Tests\n")
     
     tests = [
         ("Configuration", test_configuration),
@@ -146,32 +149,32 @@ async def main():
             result = await test_func()
             results.append((test_name, result))
         except Exception as e:
-            print(f"   💥 {test_name} test crashed: {e}")
+            print(f"   ERROR: {test_name} test crashed: {e}")
             results.append((test_name, False))
         print()
     
     # Summary
-    print("📊 Test Results:")
+    print("Test Results:")
     passed = 0
     for test_name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
+        status = "PASS" if result else "FAIL"
         print(f"   {test_name}: {status}")
         if result:
             passed += 1
     
-    print(f"\n🎯 {passed}/{len(results)} tests passed")
+    print(f"\n{passed}/{len(results)} tests passed")
     
     if passed == len(results):
-        print("🎉 Phase 1 is ready! You can move to Phase 2.")
+        print("Phase 1 is ready! You can move to Phase 2.")
     else:
-        print("🔧 Fix the failing tests before proceeding.")
+        print("Fix the failing tests before proceeding.")
         sys.exit(1)
 
 
 if __name__ == "__main__":
     # Check if .env file exists
     if not os.path.exists(".env"):
-        print("❌ .env file not found!")
+        print("ERROR: .env file not found!")
         print("   Copy .env.example to .env and fill in your values:")
         print("   cp .env.example .env")
         sys.exit(1)

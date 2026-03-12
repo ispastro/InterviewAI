@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     # ============================================================
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]  # Frontend URLs
     ENVIRONMENT: str = "development"    # development, staging, production
-    DEBUG: bool = False                # Enable debug logging
+    APP_DEBUG: bool = False             # Enable debug logging (renamed to avoid conflicts)
     
     # ============================================================
     # RATE LIMITING
@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     @property
     def database_echo(self) -> bool:
         """Should SQLAlchemy log all SQL queries?"""
-        return self.is_development and self.DEBUG
+        return self.is_development and self.APP_DEBUG
 
 
 # ============================================================
@@ -110,9 +110,13 @@ def validate_configuration():
     Call this during app startup.
     """
     # Validate database URL format
-    if not settings.DATABASE_URL.startswith(("postgresql://", "postgresql+asyncpg://")):
+    valid_prefixes = (
+        "postgresql://", "postgresql+asyncpg://",  # PostgreSQL
+        "sqlite+aiosqlite://"  # SQLite for testing
+    )
+    if not settings.DATABASE_URL.startswith(valid_prefixes):
         raise ValueError(
-            f"DATABASE_URL must start with 'postgresql://' or 'postgresql+asyncpg://'. "
+            f"DATABASE_URL must start with one of {valid_prefixes}. "
             f"Got: {settings.DATABASE_URL[:20]}..."
         )
     
@@ -125,7 +129,7 @@ def validate_configuration():
         if not origin.startswith(("http://", "https://")):
             raise ValueError(f"CORS origin must start with http:// or https://. Got: {origin}")
     
-    print(f"✅ Configuration validated successfully")
+    print(f"Configuration validated successfully")
     print(f"   Environment: {settings.ENVIRONMENT}")
     print(f"   Database: {settings.DATABASE_URL.split('@')[0]}@***")  # Hide credentials
     print(f"   CORS Origins: {settings.CORS_ORIGINS}")
