@@ -186,14 +186,17 @@ class InterviewEngine:
                 memory.add_turn(turn_data)
             
             # Send evaluation feedback to client
-            await self.connection_manager.send_message(session_id, {
-                "type": MessageType.AI_FEEDBACK,
-                "data": {
-                    "question_id": f"turn-{turn_data['turn_number']}",
-                    "turn_number": turn_data["turn_number"],
-                    **evaluation,
-                }
-            })
+            try:
+                await self.connection_manager.send_message(session_id, {
+                    "type": MessageType.AI_FEEDBACK,
+                    "data": {
+                        "question_id": f"turn-{turn_data['turn_number']}",
+                        "turn_number": turn_data["turn_number"],
+                        **evaluation,
+                    }
+                })
+            except Exception as e:
+                print(f"Failed to send feedback to session {session_id}: {e}")
             
             # Check if we should probe deeper (agentic decision)
             memory = self.session_memories.get(session_id)
@@ -207,18 +210,21 @@ class InterviewEngine:
                     )
                     
                     # Send probe question (doesn't increment turn)
-                    await self.connection_manager.send_message(session_id, {
-                        "type": MessageType.AI_QUESTION,
-                        "data": {
-                            "question": probe_question["question"],
-                            "question_type": "probe",
-                            "turn_number": turn_data["turn_number"],
-                            "focus_area": turn_data.get("focus_area", ""),
-                            "expected_duration": 2,
-                            "is_probe": True,
-                            "probe_reason": probe_reason
-                        }
-                    })
+                    try:
+                        await self.connection_manager.send_message(session_id, {
+                            "type": MessageType.AI_QUESTION,
+                            "data": {
+                                "question": probe_question["question"],
+                                "question_type": "probe",
+                                "turn_number": turn_data["turn_number"],
+                                "focus_area": turn_data.get("focus_area", ""),
+                                "expected_duration": 2,
+                                "is_probe": True,
+                                "probe_reason": probe_reason
+                            }
+                        })
+                    except Exception as e:
+                        print(f"Failed to send probe question to session {session_id}: {e}")
                     
                     # Update context with probe question
                     self.connection_manager.update_session_context(session_id, {
@@ -267,16 +273,19 @@ class InterviewEngine:
             })
             
             # Send next question to client
-            await self.connection_manager.send_message(session_id, {
-                "type": MessageType.AI_QUESTION,
-                "data": {
-                    "question": next_question["question"],
-                    "question_type": next_question["question_type"],
-                    "turn_number": next_question["turn_number"],
-                    "focus_area": next_question["focus_area"],
-                    "expected_duration": next_question["expected_duration"]
-                }
-            })
+            try:
+                await self.connection_manager.send_message(session_id, {
+                    "type": MessageType.AI_QUESTION,
+                    "data": {
+                        "question": next_question["question"],
+                        "question_type": next_question["question_type"],
+                        "turn_number": next_question["turn_number"],
+                        "focus_area": next_question["focus_area"],
+                        "expected_duration": next_question["expected_duration"]
+                    }
+                })
+            except Exception as e:
+                print(f"Failed to send next question to session {session_id}: {e}")
             
             return {
                 "status": "processed",
@@ -429,20 +438,41 @@ class InterviewEngine:
             raise
     
     async def _save_turn_to_db(self, interview_id: str, turn_data: Dict[str, Any], db: AsyncSession):
-        """Save interview turn to database"""
-        turn = Turn(
-            id=uuid.uuid4(),
-            interview_id=uuid.UUID(interview_id),
-            turn_number=turn_data["turn_number"],
-            phase=_map_question_type_to_phase(turn_data.get("question_type", "")),
-            ai_question=turn_data["question"],
-            user_answer=turn_data["response"],
-            evaluation=turn_data["evaluation"],
-            created_at=turn_data["timestamp"]
-        )
-        
-        db.add(turn)
-        await db.flush()
+        """Save interview turn to database (skip if already exists)"""
+        try:
+            # Check if turn already exists
+            existing_turn_stmt = select(Turn).where(
+                Turn.interview_id == uuid.UUID(interview_id),
+                Turn.turn_number == turn_data["turn_number"]
+            )
+            existing_turn_result = await db.execute(existing_turn_stmt)
+            existing_turn = existing_turn_result.scalar_one_or_none()
+            
+            if existing_turn:
+                print(f"Turn {turn_data['turn_number']} already exists for interview {interview_id}, skipping...")
+                return
+            
+            # Create new turn
+            turn = Turn(
+                id=uuid.uuid4(),
+                interview_id=uuid.UUID(interview_id),
+                turn_number=turn_data["turn_number"],
+                phase=_map_question_type_to_phase(turn_data.get("question_type", "")),
+                ai_question=turn_data["question"],
+                user_answer=turn_data["response"],
+                evaluation=turn_data["evaluation"],
+                created_at=turn_data["timestamp"]
+            )
+            
+            db.add(turn)
+            await db.flush()
+            print(f"✅ Saved turn {turn_data['turn_number']} for interview {interview_id}")
+            
+        except Exception as e:
+            print(f"❌ Error saving turn to database: {e}")
+            # Don't raise - allow interview to continue even if turn save fails
+            import traceback
+            traceback.print_exc()
     
     async def _save_interview_summary(self, interview_id: str, summary: Dict[str, Any], db: AsyncSession):
         """Save interview summary as feedback"""
