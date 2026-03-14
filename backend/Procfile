@@ -1,0 +1,8 @@
+# Heroku Procfile - tells Heroku how to run your app
+
+# Web process - this is the main HTTP server
+web: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+
+# Release process - runs database migrations before deployment
+release: alembic upgrade head
+

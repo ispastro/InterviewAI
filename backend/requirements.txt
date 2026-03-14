@@ -1,0 +1,33 @@
+# Web Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Database
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.1
+
+# Configuration
+pydantic-settings==2.7.1
+
+# Auth
+python-jose[cryptography]==3.3.0
+
+# File uploads
+python-multipart==0.0.20
+
+# Document parsing
+pdfplumber==0.11.4
+python-docx==1.1.2
+
+# AI
+groq==0.15.0
+
+# Retry logic for API calls
+tenacity==8.2.3
+
+# Logging
+structlog==24.4.0
+
+# Add aiosqlite for SQLite support
+aiosqlite==0.20.0
