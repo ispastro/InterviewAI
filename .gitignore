@@ -1,22 +1,31 @@
-# Virtual environment
+# Virtual environments
 venv/
 env/
 .venv/
 
-# Environment variables (NEVER commit secrets)
+# Environment variables (never commit secrets)
 .env
 .env.local
 .env.*.local
 
-# Python cache
+# Python cache and build
 __pycache__/
 *.py[cod]
 *$py.class
 *.pyo
 *.pyd
 .Python
+*.egg-info/
+*.egg
 
-# Database
+# Python testing artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Database files
 *.db
 *.db-journal
 *.sqlite
@@ -24,7 +33,35 @@ __pycache__/
 interviewme.db
 interviewme.db-journal
 
-# IDE
+# Node dependencies and package managers
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Frontend build artifacts
+.next/
+out/
+coverage/
+build/
+dist/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE/editor files
 .vscode/
 .idea/
 *.swp
@@ -34,34 +71,20 @@ interviewme.db-journal
 .classpath
 .settings/
 
-# OS
+# OS files
 .DS_Store
 .DS_Store?
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# Distribution
-*.egg-info/
-dist/
-build/
-*.egg
+# Misc
+*.pem
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.hypothesis/
-
-# Logs
-*.log
-logs/
-
-# Alembic
-alembic/versions/*.pyc
-
-# Uploads
+# Backend runtime dirs
 uploads/
 temp/
 tmp/
+
+# Alembic
+alembic/versions/*.pyc
