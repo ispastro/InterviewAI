@@ -228,6 +228,22 @@ async def delete_current_user_account(
 # HEALTH CHECK FOR AUTH SERVICE
 # ============================================================
 
+@router.post("/validate")
+async def validate_token(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Validate JWT token and return user info.
+    
+    Returns:
+        Token validation result with user data
+    """
+    return {
+        "valid": True,
+        "user": UserResponse.model_validate(current_user.to_dict())
+    }
+
+
 @router.get("/health")
 async def auth_health_check():
     """
