@@ -101,7 +101,7 @@ function SessionSummaryContent() {
         {
             id: `a-${turn.turn_number}`,
             sender: 'user' as const,
-            message: turn.user_answer,
+            message: turn.user_answer || '[No response]', // Handle null
             timestamp: new Date(interview.created_at) // Approximate
         }
     ]);
@@ -114,7 +114,9 @@ function SessionSummaryContent() {
         { key: 'relevance' as keyof ScoreBreakdown, label: 'Relevance' },
     ];
 
-    const improvements = feedback.suggestions || ['Continue practicing structured answers', 'Focus on specific metrics and impact'];
+    const improvements = (feedback.suggestions || []).map(s => 
+        typeof s === 'string' ? s : s.action
+    ).slice(0, 4);
 
     return (
         <div className="min-h-screen bg-[#F8FAFC]">
@@ -167,7 +169,7 @@ function SessionSummaryContent() {
                         </div>
                         <p className="text-[#475569] mt-4 font-[Lexend]">Overall AI Score</p>
                         <Badge variant={scores.overall >= 80 ? 'success' : scores.overall >= 60 ? 'warning' : 'error'} className="mt-2 text-sm px-4 py-1">
-                            {feedback.performance_level || (scores.overall >= 80 ? 'Excellent' : scores.overall >= 60 ? 'Good' : 'Needs Work')}
+                            {scores.overall >= 80 ? 'Excellent' : scores.overall >= 60 ? 'Good' : 'Needs Work'}
                         </Badge>
                     </Card>
                 </motion.div>
@@ -188,7 +190,7 @@ function SessionSummaryContent() {
                             <CardContent className="space-y-4">
                                 <div className="p-4 rounded-[12px] bg-[#F8FAFC] border border-[#E5E7EB]">
                                     <p className="text-sm text-[#475569] leading-relaxed font-[Lexend]">
-                                        {feedback.detailed_analysis || "The AI has analyzed your performance across multiple dimensions. You showed strong potential in key areas required for this role."}
+                                        {feedback.summary || "The AI has analyzed your performance across multiple dimensions. You showed strong potential in key areas required for this role."}
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 mt-6">
@@ -196,7 +198,7 @@ function SessionSummaryContent() {
                                         <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider font-[Lexend]">STRENGTHS</p>
                                         <div className="flex flex-wrap gap-2">
                                             {(feedback.strengths || []).slice(0, 3).map((s, i) => (
-                                                <Badge key={i} variant="success" className="text-[10px]">{s}</Badge>
+                                                <Badge key={i} variant="success" className="text-[10px]">{typeof s === 'string' ? s : s.area}</Badge>
                                             ))}
                                         </div>
                                     </div>
@@ -204,7 +206,7 @@ function SessionSummaryContent() {
                                         <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider font-[Lexend]">FOCUS AREAS</p>
                                         <div className="flex flex-wrap gap-2">
                                             {(feedback.weaknesses || []).slice(0, 3).map((w, i) => (
-                                                <Badge key={i} variant="warning" className="text-[10px]">{w}</Badge>
+                                                <Badge key={i} variant="warning" className="text-[10px]">{typeof w === 'string' ? w : w.area}</Badge>
                                             ))}
                                         </div>
                                     </div>

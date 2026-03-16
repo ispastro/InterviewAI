@@ -1,7 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import type { UIFeedback } from '@/types';
 import { ScoreCard } from './ScoreCard';
 import { StrengthsList } from './StrengthsList';
@@ -15,6 +15,7 @@ interface FeedbackPanelProps {
 
 export function FeedbackPanel({ feedback, isEvaluating = false }: FeedbackPanelProps) {
     const scoreColors = useMemo(() => ['blue', 'green', 'purple', 'amber', 'rose'] as const, []);
+    
     const scoreLabels = useMemo(() => [
         { key: 'communication_skills', label: 'Communication' },
         { key: 'confidence', label: 'Confidence' },
@@ -22,6 +23,31 @@ export function FeedbackPanel({ feedback, isEvaluating = false }: FeedbackPanelP
         { key: 'technical_knowledge', label: 'Technical Depth' },
         { key: 'relevance', label: 'Relevance' },
     ] as const, []);
+
+    if (isEvaluating) {
+        return (
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="h-full flex items-center justify-center"
+            >
+                <div className="text-center">
+                    <div className="w-10 h-10 mx-auto mb-4 border-4 border-[#E5E7EB] border-t-[#0D9488] rounded-full animate-spin" />
+                    <p className="text-[#475569] font-[Lexend]">Evaluating your answer...</p>
+                </div>
+            </motion.div>
+        );
+    }
+
+    if (!feedback) {
+        return (
+            <div className="h-full flex items-center justify-center">
+                <div className="text-center text-[#94A3B8] font-[Lexend]">
+                    <p>Answer a question to see feedback</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <motion.div

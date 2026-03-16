@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useCallback } from 'react';
+import { Mic, MicOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MicButtonProps {
@@ -15,6 +15,7 @@ export function MicButton({ isRecording, onClick, disabled = false }: MicButtonP
     const handleClick = useCallback(() => {
         onClick();
     }, [onClick]);
+
     return (
         <button
             onClick={handleClick}

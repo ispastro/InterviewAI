@@ -47,47 +47,24 @@ export interface Feedback {
   follow_up_suggestions?: string[];
 }
 
-// Connection state machine
-enum ConnectionState {
-  DISCONNECTED = 'disconnected',
-  CONNECTING = 'connecting',
-  CONNECTED = 'connected',
-  RECONNECTING = 'reconnecting',
-  FAILED = 'failed',
-}
-
 class WebSocketService {
   private socket: WebSocket | null = null;
   private messageHandlers: ((message: ChatMessage) => void)[] = [];
   private feedbackHandlers: ((feedback: Feedback) => void)[] = [];
   private statusHandlers: ((status: 'connected' | 'disconnected') => void)[] = [];
-  
-  // Connection state
-  private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5; // Increased from 3
-  private baseReconnectDelay = 1000; // Base delay for exponential backoff
-  private maxReconnectDelay = 30000; // Max 30 seconds
+  private maxReconnectAttempts = 3;
+  private reconnectDelay = 2000;
   private sessionId: string | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private isConnecting = false;
   private shouldReconnect = true;
   private currentInterviewId: string | null = null;
   private currentUserId: string | null = null;
-  
-  // Message batching
-  private messageQueue: WebSocketMessage[] = [];
-  private batchTimeout: NodeJS.Timeout | null = null;
-  private readonly BATCH_DELAY = 50; // Batch messages within 50ms
-  
-  // Health check
-  private pingInterval: NodeJS.Timeout | null = null;
-  private readonly PING_INTERVAL = 30000; // 30 seconds
-  private lastPongTime: number = Date.now();
-  private readonly PONG_TIMEOUT = 10000; // 10 seconds
 
   async connect(interviewId: string, userId: string): Promise<string> {
     // Prevent multiple simultaneous connection attempts
-    if (this.connectionState === ConnectionState.CONNECTING) {
+    if (this.isConnecting) {
       console.warn('⚠️ Connection already in progress, skipping...');
       throw new Error('Connection already in progress');
     }
@@ -106,7 +83,7 @@ class WebSocketService {
       this.cleanup();
     }
 
-    this.connectionState = ConnectionState.CONNECTING;
+    this.isConnecting = true;
     this.shouldReconnect = true;
     this.currentInterviewId = interviewId;
     this.currentUserId = userId;
@@ -115,16 +92,16 @@ class WebSocketService {
       // Get JWT token for authentication
       const token = localStorage.getItem(config.JWT_STORAGE_KEY);
       if (!token) {
-        this.connectionState = ConnectionState.FAILED;
+        this.isConnecting = false;
         reject(new Error('No authentication token found'));
         return;
       }
 
-      // Build WebSocket URL
+      // Build WebSocket URL to match backend route: /ws/interview/{interview_id}?token=...
       const wsUrl = config.WS_BASE_URL.replace('http', 'ws');
       const url = `${wsUrl}/ws/interview/${encodeURIComponent(interviewId)}?token=${encodeURIComponent(token)}`;
 
-      console.log('🔌 Connecting to WebSocket:', url.replace(/token=[^&]+/, 'token=***'));
+      console.log('Connecting to WebSocket:', url.replace(/token=[^&]+/, 'token=***'));
 
       try {
         this.socket = new WebSocket(url);
@@ -132,20 +109,18 @@ class WebSocketService {
         // Connection timeout
         const connectionTimeout = setTimeout(() => {
           if (this.socket?.readyState !== WebSocket.OPEN) {
-            console.error('⏱️ WebSocket connection timeout');
+            console.error('WebSocket connection timeout');
             this.socket?.close();
-            this.connectionState = ConnectionState.FAILED;
+            this.isConnecting = false;
             reject(new Error('Connection timeout'));
           }
-        }, 10000);
+        }, 10000); // 10 second timeout
 
         this.socket.onopen = () => {
           clearTimeout(connectionTimeout);
           console.log('✅ WebSocket connected successfully');
-          this.connectionState = ConnectionState.CONNECTED;
+          this.isConnecting = false;
           this.reconnectAttempts = 0;
-          this.lastPongTime = Date.now();
-          this.startHealthCheck();
           this.notifyStatus('connected');
         };
 
@@ -154,56 +129,54 @@ class WebSocketService {
             const message: WebSocketMessage = JSON.parse(event.data);
             this.handleMessage(message, resolve);
           } catch (error) {
-            console.error('❌ Failed to parse WebSocket message:', error);
+            console.error('Failed to parse WebSocket message:', error);
           }
         };
 
         this.socket.onclose = (event) => {
           clearTimeout(connectionTimeout);
-          this.stopHealthCheck();
-          
-          const wasConnected = this.connectionState === ConnectionState.CONNECTED;
-          this.connectionState = ConnectionState.DISCONNECTED;
-          
-          console.log(`🔌 WebSocket closed: code=${event.code}, reason=${event.reason || 'none'}, clean=${event.wasClean}`);
+          this.isConnecting = false;
+          console.log(`WebSocket closed: code=${event.code}, reason=${event.reason || 'none'}, clean=${event.wasClean}`);
           this.notifyStatus('disconnected');
           
-          // Determine if we should reconnect
+          // Only attempt reconnection if:
+          // 1. Not a clean close (code 1000)
+          // 2. Not intentionally disconnected (shouldReconnect = true)
+          // 3. Haven't exceeded max attempts
+          // 4. Not authentication failure (code 4001)
           const shouldAttemptReconnect = 
-            event.code !== 1000 && // Not a clean close
-            event.code !== 4001 && // Not authentication failure
+            event.code !== 1000 && 
+            event.code !== 4001 && 
             this.shouldReconnect && 
-            this.reconnectAttempts < this.maxReconnectAttempts &&
-            wasConnected; // Only reconnect if we were previously connected
+            this.reconnectAttempts < this.maxReconnectAttempts;
 
           if (shouldAttemptReconnect) {
-            console.log(`🔄 Will attempt reconnection (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+            console.log(`Will attempt reconnection (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
             this.attemptReconnect();
           } else {
             if (event.code === 4001) {
-              console.error('🔒 Authentication failed - not reconnecting');
+              console.error('Authentication failed - not reconnecting');
             } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-              console.error('❌ Max reconnection attempts reached');
+              console.error('Max reconnection attempts reached');
             }
-            this.connectionState = ConnectionState.FAILED;
             this.cleanup();
           }
         };
 
         this.socket.onerror = (error) => {
           clearTimeout(connectionTimeout);
-          console.error('❌ WebSocket error:', error);
-          
+          this.isConnecting = false;
+          console.error('WebSocket error:', error);
+          // Don't reject here - let onclose handle reconnection
           // Only reject if we haven't resolved yet (initial connection)
-          if (this.connectionState === ConnectionState.CONNECTING) {
-            this.connectionState = ConnectionState.FAILED;
+          if (!this.sessionId) {
             reject(new Error('WebSocket connection failed'));
           }
         };
 
       } catch (error) {
-        this.connectionState = ConnectionState.FAILED;
-        console.error('❌ Failed to create WebSocket:', error);
+        this.isConnecting = false;
+        console.error('Failed to create WebSocket:', error);
         reject(error);
       }
     });
@@ -251,19 +224,19 @@ class WebSocketService {
         break;
 
       case 'session_status':
-        console.log('📊 Session status:', message.data);
+        console.log('Session status:', message.data);
         break;
 
       case 'error':
-        console.error('❌ Server error:', message.data.message);
+        console.error('Server error:', message.data.message);
         break;
 
       case 'pong':
-        this.lastPongTime = Date.now();
+        // Handle ping/pong for connection health
         break;
 
       default:
-        console.log('❓ Unhandled message type:', message.type);
+        console.log('Unhandled message type:', message.type);
     }
   }
 
@@ -276,27 +249,18 @@ class WebSocketService {
 
     // Don't reconnect if we don't have the necessary info
     if (!this.currentInterviewId || !this.currentUserId) {
-      console.error('❌ Cannot reconnect: missing interview or user ID');
-      this.connectionState = ConnectionState.FAILED;
+      console.error('Cannot reconnect: missing interview or user ID');
       return;
     }
 
-    this.connectionState = ConnectionState.RECONNECTING;
     this.reconnectAttempts++;
+    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
     
-    // Exponential backoff with jitter
-    const exponentialDelay = Math.min(
-      this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
-      this.maxReconnectDelay
-    );
-    const jitter = Math.random() * 1000; // Add random jitter to prevent thundering herd
-    const delay = exponentialDelay + jitter;
-    
-    console.log(`⏳ Reconnecting in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    console.log(`⏳ Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
     
     this.reconnectTimeout = setTimeout(() => {
       if (!this.shouldReconnect) {
-        console.log('🛑 Reconnection cancelled');
+        console.log('Reconnection cancelled');
         return;
       }
 
@@ -313,36 +277,6 @@ class WebSocketService {
     }, delay);
   }
 
-  private startHealthCheck() {
-    this.stopHealthCheck();
-    
-    this.pingInterval = setInterval(() => {
-      if (this.socket?.readyState === WebSocket.OPEN) {
-        // Check if we received a pong recently
-        const timeSinceLastPong = Date.now() - this.lastPongTime;
-        
-        if (timeSinceLastPong > this.PONG_TIMEOUT) {
-          console.warn('⚠️ No pong received, connection may be dead');
-          this.socket.close(1000, 'Health check failed');
-          return;
-        }
-        
-        // Send ping
-        this.sendMessage({
-          type: 'ping',
-          data: { timestamp: Date.now() }
-        });
-      }
-    }, this.PING_INTERVAL);
-  }
-
-  private stopHealthCheck() {
-    if (this.pingInterval) {
-      clearInterval(this.pingInterval);
-      this.pingInterval = null;
-    }
-  }
-
   startInterview(): void {
     this.sendMessage({
       type: 'start_interview',
@@ -351,7 +285,7 @@ class WebSocketService {
   }
 
   sendAnswer(text: string): void {
-    // Add user message to chat immediately
+    // Add user message to chat immediately with unique ID
     const userMessage: ChatMessage = {
       id: `u-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       sender: 'user',
@@ -394,47 +328,15 @@ class WebSocketService {
 
   private sendMessage(message: WebSocketMessage): void {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      // For critical messages, send immediately
-      if (['start_interview', 'end_interview', 'pause_interview', 'resume_interview'].includes(message.type)) {
-        this.socket.send(JSON.stringify(message));
-      } else {
-        // Batch other messages
-        this.batchSend(message);
-      }
+      this.socket.send(JSON.stringify(message));
     } else {
-      console.warn('⚠️ WebSocket not connected, message not sent:', message.type);
+      console.warn('WebSocket not connected, message not sent:', message);
     }
-  }
-
-  private batchSend(message: WebSocketMessage): void {
-    this.messageQueue.push(message);
-    
-    if (!this.batchTimeout) {
-      this.batchTimeout = setTimeout(() => {
-        this.flushQueue();
-      }, this.BATCH_DELAY);
-    }
-  }
-
-  private flushQueue(): void {
-    if (this.messageQueue.length > 0 && this.socket?.readyState === WebSocket.OPEN) {
-      // If only one message, send it directly
-      if (this.messageQueue.length === 1) {
-        this.socket.send(JSON.stringify(this.messageQueue[0]));
-      } else {
-        // Send as batch
-        this.messageQueue.forEach(msg => {
-          this.socket!.send(JSON.stringify(msg));
-        });
-      }
-      this.messageQueue = [];
-    }
-    this.batchTimeout = null;
   }
 
   disconnect(): void {
     console.log('🔌 Disconnecting WebSocket...');
-    this.shouldReconnect = false;
+    this.shouldReconnect = false; // Prevent reconnection
     this.cleanup();
   }
 
@@ -445,15 +347,6 @@ class WebSocketService {
       this.reconnectTimeout = null;
     }
 
-    // Clear batch timeout
-    if (this.batchTimeout) {
-      clearTimeout(this.batchTimeout);
-      this.batchTimeout = null;
-    }
-
-    // Stop health check
-    this.stopHealthCheck();
-
     // Close socket if open
     if (this.socket) {
       try {
@@ -462,16 +355,15 @@ class WebSocketService {
           this.socket.close(1000, 'Client disconnect');
         }
       } catch (error) {
-        console.error('❌ Error closing WebSocket:', error);
+        console.error('Error closing WebSocket:', error);
       }
       this.socket = null;
     }
 
     // Reset state
     this.sessionId = null;
-    this.connectionState = ConnectionState.DISCONNECTED;
+    this.isConnecting = false;
     this.reconnectAttempts = 0;
-    this.messageQueue = [];
   }
 
   // Event handlers
@@ -501,18 +393,14 @@ class WebSocketService {
   }
 
   isConnected(): boolean {
-    return this.socket?.readyState === WebSocket.OPEN && 
-           this.connectionState === ConnectionState.CONNECTED;
-  }
-
-  getConnectionState(): ConnectionState {
-    return this.connectionState;
+    return this.socket?.readyState === WebSocket.OPEN;
   }
 
   getSessionId(): string | null {
     return this.sessionId;
   }
 
+  // Health check
   ping(): void {
     this.sendMessage({
       type: 'ping',
