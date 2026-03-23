@@ -55,8 +55,8 @@ export function VoiceInput({
     continuous: true,
     interimResults: true,
     lang: 'en-US',
-    silenceTimeout: 2000, // 2 seconds of silence
-    autoSubmit: true, // Enable auto-submit
+    silenceTimeout: 2500, // Increased from 2000ms to 2.5s for more stability
+    autoSubmit: !disabled, // Only auto-submit when not disabled
     onTranscriptChange: (text, isFinal) => {
       if (isFinal) {
         setLocalTranscript(text);
@@ -64,8 +64,15 @@ export function VoiceInput({
       }
     },
     onSilenceDetected: (finalTranscript) => {
+      // Guard: Only auto-submit if not disabled
+      if (disabled) {
+        console.warn('⚠️ Auto-submit blocked: input is disabled');
+        return;
+      }
+      
       // Auto-submit when silence detected
       if (finalTranscript.trim()) {
+        console.log('🔕 Auto-submitting answer after silence');
         onSend(finalTranscript.trim());
         setLocalTranscript('');
         setShowTranscript(false);
@@ -330,7 +337,7 @@ export function VoiceInput({
           {!isOnline ? (
             <span className="text-[#D97706] font-medium">No internet connection</span>
           ) : isListening ? (
-            <span className="text-[#EF4444] font-medium">Speak your answer... (auto-submits after 2s silence)</span>
+            <span className="text-[#EF4444] font-medium">Speak your answer... (auto-submits after 2.5s silence)</span>
           ) : disabled ? (
             'Interview paused'
           ) : localTranscript ? (

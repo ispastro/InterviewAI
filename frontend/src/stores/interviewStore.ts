@@ -343,9 +343,9 @@ export const useSkillsMatch = () => {
 // ============================================================
 
 if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
-  // Only log significant changes, not timer updates
+  // Only log significant changes, throttled
   let lastLogTime = 0;
-  const LOG_THROTTLE = 1000; // Log at most once per second
+  const LOG_THROTTLE = 2000; // Log at most once per 2 seconds
   
   useInterviewStore.subscribe(
     (state) => state,
@@ -357,8 +357,10 @@ if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
         key => state[key as keyof typeof state] !== prevState[key as keyof typeof prevState]
       );
       
-      // Filter out timer updates for cleaner logs
-      const significantChanges = changedKeys.filter(key => key !== 'timer');
+      // Filter out frequent updates (timer, isEvaluating)
+      const significantChanges = changedKeys.filter(key => 
+        key !== 'timer' && key !== 'isEvaluating'
+      );
       
       if (significantChanges.length > 0) {
         console.log('🔄 Store updated:', significantChanges);

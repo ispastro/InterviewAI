@@ -161,13 +161,37 @@ function LiveInterviewContent() {
 
     // Handle sending messages (both text and voice)
     const handleSendMessage = useCallback(async (message: string) => {
-        if (!message.trim() || !wsConnected) return;
+        if (!message.trim()) return;
+        
+        // Guard: Check connection and session state
+        if (!wsConnected) {
+            console.warn('⚠️ Cannot send message: not connected');
+            return;
+        }
+        
+        // Guard: Check if interview is active
+        if (!isActive) {
+            console.warn('⚠️ Cannot send message: interview not active');
+            return;
+        }
+        
+        // Guard: Check if currently evaluating
+        if (interview.isEvaluating) {
+            console.warn('⚠️ Cannot send message: AI is evaluating');
+            return;
+        }
+        
+        // Guard: Check if paused
+        if (isPaused) {
+            console.warn('⚠️ Cannot send message: interview is paused');
+            return;
+        }
         
         // Stop any ongoing speech before sending
         stopSpeech();
         
         sendAnswer(message);
-    }, [wsConnected, sendAnswer, stopSpeech]);
+    }, [wsConnected, isActive, interview.isEvaluating, isPaused, sendAnswer, stopSpeech]);
 
     // Handle auto-speak toggle
     const handleAutoSpeakToggle = useCallback(() => {
@@ -342,9 +366,10 @@ function LiveInterviewContent() {
                         {mode === 'text' ? (
                             <ChatInput
                                 onSend={handleSendMessage}
-                                disabled={!wsConnected || interview.isEvaluating || isPaused}
+                                disabled={!wsConnected || interview.isEvaluating || isPaused || !isActive}
                                 placeholder={
                                     !wsConnected ? "Connecting..." :
+                                    !isActive ? "Starting interview..." :
                                     isPaused ? "Interview paused..." :
                                     interview.isEvaluating ? "AI is evaluating your response..." :
                                     "Type your answer..."
@@ -353,7 +378,7 @@ function LiveInterviewContent() {
                         ) : (
                             <VoiceInput
                                 onSend={handleSendMessage}
-                                disabled={!wsConnected || interview.isEvaluating || isPaused}
+                                disabled={!wsConnected || interview.isEvaluating || isPaused || !isActive}
                                 autoSpeak={autoSpeakEnabled}
                                 onAutoSpeakChange={setAutoSpeakEnabled}
                             />
