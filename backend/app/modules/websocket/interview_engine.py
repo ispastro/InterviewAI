@@ -148,8 +148,19 @@ class InterviewEngine:
         if not session:
             raise ValueError("Session not found")
             
+        # More graceful handling of non-active states
         if session.status != SessionStatus.ACTIVE:
-            raise ValueError("Session is not active")
+            # Send informative error instead of raising exception
+            await self.connection_manager.send_error(
+                session_id,
+                f"Cannot process response: interview is {session.status.value}. Please wait for the interview to become active.",
+                "SESSION_NOT_ACTIVE"
+            )
+            return {
+                "status": "rejected",
+                "reason": f"Session is {session.status.value}",
+                "session_status": session.status.value
+            }
             
         try:
             # Get session context
