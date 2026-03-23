@@ -351,16 +351,19 @@ class WebSocketService {
 
   private startHealthCheck() {
     this.stopHealthCheck();
+    let hasSentPing = false;
     
     this.pingInterval = setInterval(() => {
       if (this.socket?.readyState === WebSocket.OPEN) {
-        // Check if we received a pong recently
-        const timeSinceLastPong = Date.now() - this.lastPongTime;
-        
-        if (timeSinceLastPong > this.PONG_TIMEOUT) {
-          console.warn('⚠️ No pong received, connection may be dead');
-          this.socket.close(1000, 'Health check failed');
-          return;
+        // Only check pong timeout AFTER we've sent at least one ping
+        if (hasSentPing) {
+          const timeSinceLastPong = Date.now() - this.lastPongTime;
+          
+          if (timeSinceLastPong > this.PONG_TIMEOUT + this.PING_INTERVAL) {
+            console.warn('⚠️ No pong received, connection may be dead');
+            this.socket.close(1000, 'Health check failed');
+            return;
+          }
         }
         
         // Send ping
@@ -368,6 +371,7 @@ class WebSocketService {
           type: 'ping',
           data: { timestamp: Date.now() }
         });
+        hasSentPing = true;
       }
     }, this.PING_INTERVAL);
   }

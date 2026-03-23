@@ -38,10 +38,11 @@ function LiveInterviewContent() {
     // Local state
     const [showEndModal, setShowEndModal] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
-    const [connectionError, setConnectionError] = useState<string | null>(null);
+     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [autoSpeakEnabled, setAutoSpeakEnabled] = useState(true);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const lastSpokenMessageRef = useRef<string | null>(null);
+    const hasStartedRef = useRef(false);
     
     // WebSocket connection
     const {
@@ -58,10 +59,15 @@ function LiveInterviewContent() {
         onConnect: (sessionId) => {
             console.log('✅ Connected to interview session:', sessionId);
             interview.setSessionId(sessionId);
-            // Auto-start interview after connection
-            setTimeout(() => {
-                startInterview();
-            }, 1000);
+            // Only start the interview ONCE — skip on reconnects
+            if (!hasStartedRef.current) {
+                hasStartedRef.current = true;
+                setTimeout(() => {
+                    startInterview();
+                }, 1000);
+            } else {
+                console.log('♻️ Reconnected — skipping startInterview (already started)');
+            }
         },
         onDisconnect: () => {
             console.log('❌ Disconnected from interview session');
