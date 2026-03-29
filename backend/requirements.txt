@@ -26,6 +26,9 @@ groq==0.15.0
 # Retry logic for API calls
 tenacity==8.2.3
 
+# Redis for caching
+redis[hiredis]==5.0.1
+
 # Logging
 structlog==24.4.0
 

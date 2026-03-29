@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     GROQ_MAX_TOKENS: int = 2048
     GROQ_TEMPERATURE: float = 0.7
 
+    # Redis Cache (optional)
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_ENABLED: bool = False
+    CACHE_TTL_SECONDS: int = 3600  # 1 hour default
+
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
     ENVIRONMENT: str = "development"
     APP_DEBUG: bool = False
