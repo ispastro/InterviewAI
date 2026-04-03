@@ -21,10 +21,18 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4">
             <Link href="/login">
-              <Button variant="ghost" size="sm">Log In</Button>
+              <Button variant="ghost" size="sm" className="rounded-none">Log In</Button>
             </Link>
             <Link href="/dashboard">
-              <Button size="sm">Get Started</Button>
+              <Button size="sm" className="rounded-none group overflow-hidden relative">
+                <span className="invisible">Get Started</span>
+                <span className="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-full">
+                  Get Started
+                </span>
+                <span className="absolute inset-0 flex items-center justify-center translate-y-full transition-transform duration-300 group-hover:translate-y-0">
+                  Get Started
+                </span>
+              </Button>
             </Link>
           </div>
         </div>
@@ -54,14 +62,30 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <Link href="/interview/setup">
-                <Button size="lg" className="text-base px-8">
-                  Start Free Interview
-                  <ArrowRight size={20} className="ml-2" />
+                <Button size="lg" className="text-base px-8 rounded-none group overflow-hidden relative">
+                  <span className="invisible flex items-center gap-2">
+                    Start Free Interview
+                    <ArrowRight size={20} />
+                  </span>
+                  <span className="absolute inset-0 flex items-center justify-center gap-2 transition-transform duration-300 group-hover:-translate-y-full">
+                    Start Free Interview
+                    <ArrowRight size={20} />
+                  </span>
+                  <span className="absolute inset-0 flex items-center justify-center gap-2 translate-y-full transition-transform duration-300 group-hover:translate-y-0">
+                    Start Free Interview
+                    <ArrowRight size={20} />
+                  </span>
                 </Button>
               </Link>
               <Link href="#how-it-works">
-                <Button variant="outline" size="lg" className="text-base px-8">
-                  See How It Works
+                <Button variant="outline" size="lg" className="text-base px-8 rounded-none group overflow-hidden relative">
+                  <span className="invisible">See How It Works</span>
+                  <span className="absolute inset-0 flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-full">
+                    See How It Works
+                  </span>
+                  <span className="absolute inset-0 flex items-center justify-center translate-y-full transition-transform duration-300 group-hover:translate-y-0">
+                    See How It Works
+                  </span>
                 </Button>
               </Link>
             </div>
@@ -272,9 +296,19 @@ export default function LandingPage() {
             Join thousands of successful candidates who used InterviewMe to land their dream jobs
           </p>
           <Link href="/interview/setup">
-            <Button size="lg" className="text-base px-12">
-              Start Free Interview
-              <ArrowRight size={20} className="ml-2" />
+            <Button size="lg" className="text-base px-12 rounded-none group overflow-hidden relative">
+              <span className="invisible flex items-center gap-2">
+                Start Free Interview
+                <ArrowRight size={20} />
+              </span>
+              <span className="absolute inset-0 flex items-center justify-center gap-2 transition-transform duration-300 group-hover:-translate-y-full">
+                Start Free Interview
+                <ArrowRight size={20} />
+              </span>
+              <span className="absolute inset-0 flex items-center justify-center gap-2 translate-y-full transition-transform duration-300 group-hover:translate-y-0">
+                Start Free Interview
+                <ArrowRight size={20} />
+              </span>
             </Button>
           </Link>
           <p className="mt-6 text-sm text-gray-500">
