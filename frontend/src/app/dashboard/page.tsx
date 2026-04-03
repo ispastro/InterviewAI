@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
     ArrowRight,
     Bot,
@@ -10,7 +12,9 @@ import {
     TrendingUp,
     Calendar,
     ChevronRight,
-    RotateCcw
+    RotateCcw,
+    LogOut,
+    User
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
 import { RadarChart } from '@/components/charts';
@@ -20,10 +24,19 @@ import { formatDate } from '@/lib/utils';
 import type { ScoreBreakdown } from '@/types';
 
 export default function DashboardPage() {
+    const router = useRouter();
     const user = useUserStore((state) => state.user);
+    const logout = useUserStore((state) => state.logout);
     const userName = user?.name || 'Guest';
+    const userEmail = user?.email || 'No email provided';
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
     const { data: interviewList, isLoading: interviewsLoading } = useUserInterviews(1, 10);
     const { data: stats, isLoading: statsLoading } = useUserStats();
+
+    const handleLogout = () => {
+        logout();
+        router.push('/login');
+    };
 
     const averageScore = stats?.average_score || 0;
     const mappedScore = Math.max(0, Math.min(5, averageScore / 20));
@@ -57,11 +70,46 @@ export default function DashboardPage() {
                         <span className="text-xl font-bold text-gray-900">InterviewMe</span>
                     </Link>
 
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#0D9488] flex items-center justify-center">
-                            <span className="text-white font-semibold">{userName.charAt(0)}</span>
-                        </div>
-                        <span className="text-gray-900 font-medium hidden sm:block">{userName}</span>
+                    <div className="relative">
+                        <button 
+                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-[#0D9488] flex items-center justify-center">
+                                <span className="text-white font-semibold">{userName.charAt(0)}</span>
+                            </div>
+                            <span className="text-gray-900 font-medium hidden sm:block">{userName}</span>
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {isProfileOpen && (
+                            <>
+                                <div 
+                                    className="fixed inset-0 z-10" 
+                                    onClick={() => setIsProfileOpen(false)}
+                                />
+                                <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 shadow-lg z-20">
+                                    <div className="p-4 border-b border-gray-200">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-12 h-12 rounded-full bg-[#0D9488] flex items-center justify-center">
+                                                <span className="text-white font-semibold text-lg">{userName.charAt(0)}</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-gray-900 truncate">{userName}</p>
+                                                <p className="text-sm text-gray-600 truncate">{userEmail}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
+                                    >
+                                        <LogOut size={18} />
+                                        <span className="font-medium">Logout</span>
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </header>

@@ -40,9 +40,9 @@ export default function RegisterPage() {
 
         setIsLoading(true);
         try {
-            const user = await authService.register(name, email, password);
-            login(user);
-            router.push('/dashboard');
+            await authService.register(name, email, password);
+            // Redirect to login page after successful registration
+            router.push('/login?registered=true');
         } catch (err: any) {
             setError(err.message || 'Registration failed');
         } finally {
