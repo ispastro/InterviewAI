@@ -16,6 +16,23 @@ async def lifespan(app: FastAPI):
     try:
         validate_configuration()
         await startup_database()
+        
+        # Initialize Upstash Redis
+        if settings.REDIS_ENABLED:
+            try:
+                from app.integrations.upstash import get_redis
+                redis = get_redis()
+                
+                if await redis.ping():
+                    print(f"✅ Upstash Redis connected (TTL={settings.CACHE_TTL_SECONDS}s)")
+                else:
+                    print("⚠️ Redis ping failed - caching disabled")
+            except Exception as e:
+                print(f"⚠️ Redis initialization failed: {e}")
+                print("⚠️ App will work without caching")
+        else:
+            print("ℹ️ Redis caching disabled (REDIS_ENABLED=false)")
+        
         print(f"InterviewMe API started — env: {settings.ENVIRONMENT}")
     except Exception as e:
         print(f"Failed to start: {e}")
@@ -67,6 +84,16 @@ async def readiness_check():
         "database": await check_database_connection(),
         "configuration": True,
     }
+    
+    # Check Redis if enabled
+    if settings.REDIS_ENABLED:
+        try:
+            from app.integrations.upstash import get_redis
+            redis = get_redis()
+            checks["redis"] = await redis.ping()
+        except:
+            checks["redis"] = False
+    
     return {
         "status": "ready" if all(checks.values()) else "not_ready",
         "checks": checks,
@@ -84,6 +111,34 @@ async def root():
         "docs": "/docs" if not settings.is_production else "Not available in production",
         "health": "/health",
     }
+
+
+@app.get("/health/redis")
+async def redis_health():
+    """Redis cache health and metrics."""
+    try:
+        from app.integrations.upstash import get_redis
+        redis = get_redis()
+        
+        if not redis.enabled:
+            return {
+                "status": "disabled",
+                "message": "Redis caching is disabled"
+            }
+        
+        ping_ok = await redis.ping()
+        metrics = await redis.get_metrics()
+        
+        return {
+            "status": "healthy" if ping_ok else "unhealthy",
+            "ping": ping_ok,
+            "metrics": metrics
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 
 if settings.is_development:

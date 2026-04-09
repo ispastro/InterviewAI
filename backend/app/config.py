@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     GROQ_MAX_TOKENS: int = 2048
     GROQ_TEMPERATURE: float = 0.7
 
-    # Redis Cache (optional)
-    REDIS_URL: str = "redis://localhost:6379/0"
+    # Upstash Redis (caching, sessions, rate limiting)
+    UPSTASH_REDIS_REST_URL: str = ""
+    UPSTASH_REDIS_REST_TOKEN: str = ""
     REDIS_ENABLED: bool = False
     CACHE_TTL_SECONDS: int = 3600  # 1 hour default
 

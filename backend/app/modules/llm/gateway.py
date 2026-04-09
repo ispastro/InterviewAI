@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from .client import llm_client
-from .cache import get_cache
+from app.core.cache import get_llm_cache
 from app.core.exceptions import AIServiceError
 
 logger = logging.getLogger(__name__)
@@ -116,10 +116,10 @@ class LLMGateway:
         self.metrics.total_requests += 1
         
         try:
-            cache = get_cache()
+            cache = get_llm_cache()
             
             # Step 1: Try cache first (if enabled)
-            if use_cache and cache.enabled:
+            if use_cache and cache.redis.enabled:
                 cache_start = time.time()
                 cached = await cache.get(
                     prompt=prompt,
@@ -160,7 +160,7 @@ class LLMGateway:
             logger.info(f"Gateway: API call completed ({api_elapsed:.1f}ms)")
             
             # Step 3: Cache the response (if enabled)
-            if use_cache and cache.enabled:
+            if use_cache and cache.redis.enabled:
                 await cache.set(
                     prompt=prompt,
                     response=response,
@@ -344,7 +344,7 @@ class LLMGateway:
         Returns:
             True if invalidated successfully
         """
-        cache = get_cache()
+        cache = get_llm_cache()
         return await cache.delete(
             prompt=prompt,
             system_prompt=system_prompt,
@@ -353,14 +353,14 @@ class LLMGateway:
             model=llm_client.model
         )
     
-    async def clear_all_cache(self) -> bool:
+    async def clear_all_cache(self) -> int:
         """
         Clear all cached responses.
         
         Returns:
-            True if cleared successfully
+            Number of keys deleted
         """
-        cache = get_cache()
+        cache = get_llm_cache()
         return await cache.clear_all()
     
     def get_metrics(self) -> Dict[str, Any]:
@@ -384,16 +384,13 @@ class LLMGateway:
         Returns:
             Dictionary with health information
         """
-        cache = get_cache()
+        cache = get_llm_cache()
         cache_stats = await cache.get_stats()
         
         return {
             "status": "healthy",
             "timestamp": datetime.utcnow().isoformat(),
-            "cache": {
-                "enabled": cache.enabled,
-                "stats": cache_stats
-            },
+            "cache": cache_stats,
             "client": {
                 "model": llm_client.model,
                 "max_tokens": llm_client.default_max_tokens,
