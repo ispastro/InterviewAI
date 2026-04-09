@@ -56,7 +56,7 @@ export interface SpeechRecognitionError {
 export function isSpeechRecognitionSupported(): boolean {
   return !!(
     typeof window !== 'undefined' &&
-    (window.SpeechRecognition || (window as any).webkitSpeechRecognition)
+    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
   );
 }
 
@@ -83,7 +83,7 @@ class SpeechRecognitionService {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         this.recognition = new SpeechRecognition();
         this.setupEventHandlers();
@@ -128,9 +128,13 @@ class SpeechRecognitionService {
     
     this.silenceTimer = setTimeout(() => {
       const silenceDuration = Date.now() - this.lastSpeechTime;
+      const hasMinimumContent = this.finalTranscript.trim().split(' ').length >= 3; // At least 3 words
       
-      // If silence duration exceeds threshold and we have transcript
-      if (silenceDuration >= timeout && this.finalTranscript.trim()) {
+      // Only auto-submit if:
+      // 1. Silence duration exceeds threshold
+      // 2. We have meaningful content (at least 3 words)
+      // 3. Still listening (not manually stopped)
+      if (silenceDuration >= timeout && hasMinimumContent && this.isListening) {
         console.log('🔇 Silence detected - auto-submitting answer');
         
         // Call silence callback with final transcript
@@ -138,6 +142,9 @@ class SpeechRecognitionService {
         
         // Stop listening
         this.stop();
+      } else if (this.isListening) {
+        // If still listening but conditions not met, restart timer
+        this.startSilenceDetection();
       }
     }, timeout);
   }
@@ -211,39 +218,32 @@ class SpeechRecognitionService {
     };
 
     this.recognition.onerror = (event: any) => {
-      // Auto-restart on no-speech and network errors (resilient forever)
-      const autoRestartErrors = ['no-speech', 'network'];
-      
-      if (autoRestartErrors.includes(event.error)) {
-        console.warn(`🔄 ${event.error} - auto-restarting...`);
-        
-        setTimeout(() => {
-          if (this.isListening) {
-            try {
-              this.recognition.start();
-            } catch (e) {
-              // Already running, ignore
-            }
-          }
-        }, 500);
-        return; // Don't emit error or stop
-      }
-      
-      // Only log actual errors
       console.error('🎤 Speech recognition error:', event.error);
       
+      // Don't auto-restart - let the user control it
+      // Auto-restart was causing interruptions mid-speech
+      
       const errorMessages: Record<string, string> = {
+        'no-speech': 'No speech detected. Please try speaking again.',
         'audio-capture': 'Microphone not accessible. Please check permissions.',
         'not-allowed': 'Microphone permission denied.',
+        'network': 'Network error. Please check your connection.',
         'aborted': 'Speech recognition stopped.',
       };
 
-      this.callbacks.onError?.({
-        error: event.error,
-        message: errorMessages[event.error] || 'Speech recognition failed.',
-      });
+      // Only emit error for critical issues, not transient ones
+      const criticalErrors = ['audio-capture', 'not-allowed', 'aborted'];
       
-      this.isListening = false;
+      if (criticalErrors.includes(event.error)) {
+        this.callbacks.onError?.({
+          error: event.error,
+          message: errorMessages[event.error] || 'Speech recognition failed.',
+        });
+        this.isListening = false;
+      } else {
+        // For transient errors (no-speech, network), just log and continue
+        console.warn(`⚠️ Transient error: ${event.error} - continuing...`);
+      }
     };
 
     this.recognition.onnomatch = () => {
