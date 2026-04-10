@@ -77,17 +77,10 @@ export function useUploadCV() {
     mutationFn: ({ interviewId, file }: { interviewId: string; file: File }) =>
       interviewService.uploadCV(interviewId, file),
     onSuccess: (data, variables) => {
-      // Update the interview cache with new CV analysis
+      // Update the interview cache
       queryClient.setQueryData(
         interviewKeys.detail(variables.interviewId),
-        (oldData: Interview | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            cv_analysis: data.analysis,
-            status: 'cv_uploaded' as const,
-          };
-        }
+        data
       );
       
       // Invalidate related queries
@@ -111,15 +104,7 @@ export function useUploadCVText() {
     onSuccess: (data, variables) => {
       queryClient.setQueryData(
         interviewKeys.detail(variables.interviewId),
-        (oldData: Interview | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            cv_analysis: data.analysis,
-            cv_raw_text: variables.cvText,
-            status: 'cv_uploaded' as const,
-          };
-        }
+        data
       );
       
       queryClient.invalidateQueries({ 
@@ -139,14 +124,7 @@ export function useUploadJD() {
     onSuccess: (data, variables) => {
       queryClient.setQueryData(
         interviewKeys.detail(variables.interviewId),
-        (oldData: Interview | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            jd_analysis: data.analysis,
-            status: oldData.cv_analysis ? 'ready' : 'jd_uploaded' as const,
-          };
-        }
+        data
       );
       
       queryClient.invalidateQueries({ 
@@ -166,15 +144,7 @@ export function useUploadJDText() {
     onSuccess: (data, variables) => {
       queryClient.setQueryData(
         interviewKeys.detail(variables.interviewId),
-        (oldData: Interview | undefined) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            jd_analysis: data.analysis,
-            jd_raw_text: variables.jdText,
-            status: oldData.cv_analysis ? 'ready' : 'jd_uploaded' as const,
-          };
-        }
+        data
       );
       
       queryClient.invalidateQueries({ 
@@ -268,7 +238,7 @@ export function useInterviewAnalysis(interviewId: string | null, enabled = true)
 export function useInterviewReadiness(interviewId: string | null, enabled = true) {
   return useQuery({
     queryKey: [...interviewKeys.detail(interviewId || ''), 'readiness'],
-    queryFn: () => interviewService.checkInterviewReadiness(interviewId!),
+    queryFn: () => interviewService.getInterview(interviewId!),
     enabled: enabled && !!interviewId,
     staleTime: 1 * 60 * 1000, // 1 minute
   });

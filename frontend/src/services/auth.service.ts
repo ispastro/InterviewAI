@@ -101,11 +101,21 @@ class AuthService {
   }
 
   // Development helper - auto-login for testing
-  async devLogin(): Promise<User> {
+  async devLogin(email?: string, name?: string): Promise<User> {
     try {
-      const token = await this.createTestToken();
+      const token = await this.createTestToken(email, name);
       this.setToken(token);
-      return await this.getCurrentUser();
+      const user = await this.getCurrentUser();
+      // Override with provided email/name if available
+      if (email || name) {
+        return {
+          ...user,
+          email: email || user.email,
+          name: name || user.name,
+          display_name: name || user.display_name,
+        };
+      }
+      return user;
     } catch (error) {
       throw new Error('Development login failed');
     }
@@ -114,9 +124,11 @@ class AuthService {
   // Login method (for development/testing)
   async login(email: string, password: string): Promise<User> {
     // TODO: Implement actual login when backend auth is ready
-    // For now, use dev login
+    // For now, use dev login with the provided email
     if (this.isDevelopment()) {
-      return this.devLogin();
+      // Extract name from email for display
+      const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      return this.devLogin(email, name);
     }
     throw new Error('Login not implemented - use NextAuth.js');
   }
@@ -125,7 +137,7 @@ class AuthService {
   async register(name: string, email: string, password: string): Promise<User> {
     // TODO: Implement actual registration when backend auth is ready
     if (this.isDevelopment()) {
-      return this.devLogin();
+      return this.devLogin(email, name);
     }
     throw new Error('Registration not implemented - use NextAuth.js');
   }

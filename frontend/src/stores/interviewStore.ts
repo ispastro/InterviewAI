@@ -302,16 +302,16 @@ export const useProgressPercentage = () =>
   );
 
 export const useUserMessages = () => 
-  useInterviewStore(state => state.messages.filter(m => m.sender === 'user'), shallow);
+  useInterviewStore(state => state.messages.filter(m => m.sender === 'user'));
 
 export const useInterviewerMessages = () => 
-  useInterviewStore(state => state.messages.filter(m => m.sender === 'interviewer'), shallow);
+  useInterviewStore(state => state.messages.filter(m => m.sender === 'interviewer'));
 
 export const useCVSkills = () => 
-  useInterviewStore(state => state.cvAnalysis?.skills.technical || [], shallow);
+  useInterviewStore(state => state.cvAnalysis?.skills.technical || []);
 
 export const useJDRequiredSkills = () => 
-  useInterviewStore(state => state.jdAnalysis?.required_skills || [], shallow);
+  useInterviewStore(state => state.jdAnalysis?.required_skills || []);
 
 // Skills matching selector (memoized)
 export const useSkillsMatch = () => {
@@ -333,8 +333,7 @@ export const useSkillsMatch = () => {
           !jdSkillsLower.some(jdSkill => jdSkill.includes(skill) || skill.includes(jdSkill))
         ),
       };
-    },
-    shallow
+    }
   );
 };
 

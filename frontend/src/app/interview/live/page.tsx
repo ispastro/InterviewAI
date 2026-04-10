@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Bot, X, Wifi, WifiOff, Pause, Play, AlertCircle, Volume2, VolumeX } from 'lucide-react';
-import { Button, ConfirmModal } from '@/components/ui';
+import { Button, ConfirmModal, toast } from '@/components/ui';
 import { ChatMessage, TypingIndicator, ChatInput, VoiceInput } from '@/components/chat';
 import { FeedbackPanel } from '@/components/feedback';
 import { Timer } from '@/components/Timer';
@@ -58,6 +58,7 @@ function LiveInterviewContent() {
     } = useWebSocket(interviewId, userId, {
         onConnect: (sessionId) => {
             console.log('✅ Connected to interview session:', sessionId);
+            toast.success('Connected to interview session');
             interview.setSessionId(sessionId);
             // Only start the interview ONCE — skip on reconnects
             if (!hasStartedRef.current) {
@@ -71,10 +72,12 @@ function LiveInterviewContent() {
         },
         onDisconnect: () => {
             console.log('❌ Disconnected from interview session');
+            toast.error('Connection lost. Reconnecting...');
             setConnectionError('Connection lost. Attempting to reconnect...');
         },
         onError: (error) => {
             console.error('❌ WebSocket error:', error);
+            toast.error(error.message);
             setConnectionError(error.message);
         },
     });
@@ -268,39 +271,39 @@ function LiveInterviewContent() {
     return (
         <div className="h-screen flex flex-col bg-white">
             {/* Top Bar */}
-            <header className="flex-shrink-0 px-6 py-4 bg-white border-b border-[#E5E7EB]">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+            <header className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 bg-white border-b border-[#E5E7EB]">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                         <InterviewerAvatar isThinking={interview.isEvaluating} />
-                        <div>
-                            <p className="font-semibold text-[#0F172A] font-[Lora]">AI Interviewer</p>
-                            <div className="flex items-center gap-2 text-sm font-[Lexend]">
+                        <div className="min-w-0">
+                            <p className="font-semibold text-[#0F172A] font-[Lora] text-sm sm:text-base truncate">AI Interviewer</p>
+                            <div className="flex items-center gap-2 text-xs sm:text-sm font-[Lexend]">
                                 {wsConnected ? (
                                     <span className="flex items-center gap-1 text-[#10B981]">
-                                        <Wifi size={14} />
-                                        Connected
+                                        <Wifi size={12} className="sm:w-3.5 sm:h-3.5" />
+                                        <span className="hidden sm:inline">Connected</span>
                                     </span>
                                 ) : (
                                     <span className="flex items-center gap-1 text-[#EF4444]">
-                                        <WifiOff size={14} />
-                                        {connectionError || 'Disconnected'}
+                                        <WifiOff size={12} className="sm:w-3.5 sm:h-3.5" />
+                                        <span className="hidden sm:inline">{connectionError || 'Disconnected'}</span>
                                     </span>
                                 )}
                                 {isPaused && (
-                                    <span className="text-[#F59E0B]">• Paused</span>
+                                    <span className="text-[#F59E0B] hidden sm:inline">• Paused</span>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4">
                         {/* Auto-speak toggle (voice mode only) */}
                         {mode === 'voice' && isSynthesisSupported && (
                             <button
                                 onClick={handleAutoSpeakToggle}
                                 disabled={!wsConnected}
                                 className={cn(
-                                    'flex items-center gap-2 px-3 py-1.5 rounded-[8px] transition-all text-sm font-[Lexend]',
+                                    'flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-[8px] transition-all text-xs sm:text-sm font-[Lexend]',
                                     autoSpeakEnabled
                                         ? 'bg-[#DBEAFE] text-[#1E40AF] hover:bg-[#BFDBFE]'
                                         : 'bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]',
@@ -308,7 +311,7 @@ function LiveInterviewContent() {
                                 )}
                                 title={autoSpeakEnabled ? 'Auto-speak enabled' : 'Auto-speak disabled'}
                             >
-                                {autoSpeakEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                                {autoSpeakEnabled ? <Volume2 size={14} className="sm:w-4 sm:h-4" /> : <VolumeX size={14} className="sm:w-4 sm:h-4" />}
                                 <span className="hidden lg:inline">
                                     {autoSpeakEnabled ? 'TTS On' : 'TTS Off'}
                                 </span>
@@ -326,15 +329,16 @@ function LiveInterviewContent() {
                             size="sm"
                             onClick={handlePauseResume}
                             disabled={!wsConnected}
+                            className="hidden sm:flex"
                         >
                             {isPaused ? <Play size={16} /> : <Pause size={16} />}
-                            {isPaused ? 'Resume' : 'Pause'}
+                            <span className="hidden md:inline ml-2">{isPaused ? 'Resume' : 'Pause'}</span>
                         </Button>
                     </div>
 
-                    <Button variant="destructive" size="sm" onClick={() => setShowEndModal(true)}>
-                        <X size={18} className="mr-2" />
-                        End Interview
+                    <Button variant="destructive" size="sm" onClick={() => setShowEndModal(true)} className="text-xs sm:text-sm">
+                        <X size={14} className="sm:w-4 sm:h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">End</span>
                     </Button>
                 </div>
             </header>
@@ -343,7 +347,7 @@ function LiveInterviewContent() {
             <div className="flex-1 flex overflow-hidden">
                 {/* Chat Panel */}
                 <div className="flex-1 flex flex-col border-r border-[#E5E7EB] lg:w-[70%]">
-                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-white">
+                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 bg-white">
                         {interview.messages.length === 0 && !interview.isEvaluating && (
                             <div className="text-center py-12">
                                 <Bot size={48} className="text-[#94A3B8] mx-auto mb-4" />
@@ -362,7 +366,7 @@ function LiveInterviewContent() {
                         {interview.isEvaluating && <TypingIndicator />}
                     </div>
 
-                    <div className="flex-shrink-0 p-6 border-t border-[#E5E7EB] bg-[#F8FAFC]">
+                    <div className="flex-shrink-0 p-3 sm:p-6 border-t border-[#E5E7EB] bg-[#F8FAFC]">
                         {mode === 'text' ? (
                             <ChatInput
                                 onSend={handleSendMessage}

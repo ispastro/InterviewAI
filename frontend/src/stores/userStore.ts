@@ -55,21 +55,32 @@ export const useUserStore = create<UserState>()(
         setError: (error) => 
           set({ error }, false, 'setError'),
 
-        login: (user) => 
+        login: (user) => {
+          // Clear any existing persisted data first
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('user-store');
+          }
           set({ 
             user, 
             isAuthenticated: true, 
             error: null,
             isLoading: false 
-          }, false, 'login'),
+          }, false, 'login');
+        },
 
-        logout: () => 
+        logout: () => {
+          // Clear persisted data
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('user-store');
+            localStorage.removeItem('interviewme_token');
+          }
           set({ 
             user: null, 
             isAuthenticated: false, 
             error: null,
             isLoading: false 
-          }, false, 'logout'),
+          }, false, 'logout');
+        },
 
         updateUser: (updates) =>
           set((state) => ({

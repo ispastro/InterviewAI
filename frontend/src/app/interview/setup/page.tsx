@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bot, Upload, FileText, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, toast, PageTransition } from '@/components/ui';
 import { interviewService } from '@/services/interview.service';
 
 export default function InterviewSetupPage() {
@@ -85,6 +85,7 @@ export default function InterviewSetupPage() {
                 router.push(`/interview/live?interview_id=${interview.id}`);
             }, 500);
         } catch (error: any) {
+            toast.error(error.message || 'Failed to create interview');
             setUploadError(error.message || 'Upload failed');
             setProcessingStatus('');
         } finally {
@@ -93,6 +94,7 @@ export default function InterviewSetupPage() {
     };
 
     return (
+        <PageTransition>
         <div className="min-h-screen bg-white">
             {/* Header */}
             <header className="border-b border-gray-200">
@@ -256,5 +258,6 @@ export default function InterviewSetupPage() {
                 </div>
             </main>
         </div>
+        </PageTransition>
     );
 }

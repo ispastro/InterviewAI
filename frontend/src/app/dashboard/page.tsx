@@ -16,7 +16,7 @@ import {
     LogOut,
     User
 } from 'lucide-react';
-import { Button, Card, CardHeader, CardTitle, CardContent, Badge } from '@/components/ui';
+import { Button, Card, CardHeader, CardTitle, CardContent, Badge, PageTransition, InterviewCardSkeleton } from '@/components/ui';
 import { RadarChart } from '@/components/charts';
 import { useUserStore } from '@/stores';
 import { useUserInterviews, useUserStats } from '@/hooks/api/useInterview';
@@ -61,6 +61,7 @@ export default function DashboardPage() {
     const inProgressInterview = sessions.find((s) => s.status === 'in_progress');
 
     return (
+        <PageTransition>
         <div className="min-h-screen bg-white">
             {/* Header */}
             <header className="border-b border-gray-200 px-6 py-4">
@@ -202,9 +203,11 @@ export default function DashboardPage() {
                             </div>
                             <div className="space-y-4">
                                 {interviewsLoading && (
-                                    <div className="p-4 border border-gray-200 text-gray-600">
-                                        Loading interview history...
-                                    </div>
+                                    <>
+                                        <InterviewCardSkeleton />
+                                        <InterviewCardSkeleton />
+                                        <InterviewCardSkeleton />
+                                    </>
                                 )}
                                 {!interviewsLoading && sessions.length === 0 && (
                                     <div className="p-4 border border-gray-200 text-gray-600">
@@ -252,5 +255,6 @@ export default function DashboardPage() {
                 </div>
             </main>
         </div>
+        </PageTransition>
     );
 }

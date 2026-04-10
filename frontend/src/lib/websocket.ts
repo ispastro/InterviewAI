@@ -237,7 +237,9 @@ class WebSocketService {
         // Limit set size to prevent memory leak
         if (this.processedMessageIds.size > this.MAX_PROCESSED_IDS) {
           const firstId = this.processedMessageIds.values().next().value;
-          this.processedMessageIds.delete(firstId);
+          if (firstId) {
+            this.processedMessageIds.delete(firstId);
+          }
         }
         
         const chatMessage: ChatMessage = {
@@ -270,7 +272,9 @@ class WebSocketService {
         
         if (this.processedMessageIds.size > this.MAX_PROCESSED_IDS) {
           const firstId = this.processedMessageIds.values().next().value;
-          this.processedMessageIds.delete(firstId);
+          if (firstId) {
+            this.processedMessageIds.delete(firstId);
+          }
         }
         
         const feedback: Feedback = {

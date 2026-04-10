@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/contexts/QueryProvider";
+import { ToastContainer, ErrorBoundary } from "@/components/ui";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,9 +79,13 @@ export default function RootLayout({
       >
         <QueryProvider>
           <AuthProvider>
-            <div id="root" className="min-h-screen">
-              {children}
-            </div>
+            <ErrorBoundary>
+              <div id="root" className="min-h-screen">
+                {children}
+              </div>
+            </ErrorBoundary>
+            
+            <ToastContainer />
             
             {/* Portal containers for modals and overlays */}
             <div id="modal-root" />

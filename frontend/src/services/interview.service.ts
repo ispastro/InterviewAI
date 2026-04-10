@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client';
+import { toast } from '@/components/ui';
 import type { Interview, CVAnalysis, JDAnalysis, Turn, Feedback } from '@/types/backend';
 
 export interface CreateInterviewRequest {
@@ -50,7 +51,6 @@ class InterviewService {
     } else if (data.jdText) {
       formData.append('jd_text', data.jdText);
     } else {
-      // Fallback JD for testing
       const fallbackJd = 'Software Engineer role requiring problem solving, communication, and technical depth. The candidate should explain past projects, architectural decisions, collaboration style, and delivery impact in a structured interview conversation.';
       formData.append('jd_text', fallbackJd);
     }
@@ -59,11 +59,13 @@ class InterviewService {
       formData.append('target_company', data.targetCompany);
     }
 
-    // Create interview
-    const response = await apiClient.postForm<Interview>('/api/interviews', formData);
-    
-    // Poll until ready or failed
-    return this.pollInterviewStatus(response.id);
+    try {
+      const response = await apiClient.postForm<Interview>('/api/interviews', formData);
+      return this.pollInterviewStatus(response.id);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create interview');
+      throw error;
+    }
   }
 
   // Poll interview status until ready
@@ -155,6 +157,30 @@ class InterviewService {
     };
   }> {
     return apiClient.get(`/api/interviews/${interviewId}/analysis`);
+  }
+
+  // Upload CV file
+  async uploadCV(interviewId: string, file: File): Promise<Interview> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.postForm<Interview>(`/api/interviews/${interviewId}/upload-cv`, formData);
+  }
+
+  // Upload CV text
+  async uploadCVText(interviewId: string, text: string): Promise<Interview> {
+    return apiClient.post<Interview>(`/api/interviews/${interviewId}/upload-cv-text`, { cv_text: text });
+  }
+
+  // Upload JD file
+  async uploadJD(interviewId: string, file: File): Promise<Interview> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.postForm<Interview>(`/api/interviews/${interviewId}/upload-jd`, formData);
+  }
+
+  // Upload JD text
+  async uploadJDText(interviewId: string, text: string): Promise<Interview> {
+    return apiClient.post<Interview>(`/api/interviews/${interviewId}/upload-jd-text`, { jd_text: text });
   }
 
   // Utility methods for file validation

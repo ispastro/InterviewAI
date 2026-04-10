@@ -53,12 +53,14 @@ export default function RegisterPage() {
     return (
         <div className="min-h-screen flex">
             {/* Left Side - Image */}
-            <div className="hidden lg:flex flex-1 relative overflow-hidden">
+            <div className="hidden lg:flex flex-1 relative overflow-hidden bg-gray-100">
                 <img 
                     src="/left_side_image.png" 
                     alt="Interview Illustration" 
-                    className="w-full h-full object-fill"
+                    className="w-full h-full object-cover"
                 />
+                {/* Optional: Subtle gradient overlay for seamless transition */}
+                <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-white/10 to-transparent pointer-events-none" />
             </div>
 
             {/* Right Side - Form */}

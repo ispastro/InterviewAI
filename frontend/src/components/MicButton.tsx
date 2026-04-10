@@ -2,8 +2,8 @@
 
 import { useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { Mic, MicOff } from 'lucide-react';
 
 interface MicButtonProps {
     isRecording: boolean;
