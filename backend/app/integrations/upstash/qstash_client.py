@@ -1,14 +1,4 @@
-"""
-Upstash QStash Client Wrapper
 
-Production-ready async job queue with:
-- Automatic retries with exponential backoff
-- Webhook signature verification
-- Dead letter queue support
-- Job status tracking
-- Comprehensive error handling
-- Metrics tracking
-"""
 
 import hashlib
 import hmac
@@ -34,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class JobStatus(str, Enum):
-    """Job execution status."""
+    
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -44,7 +34,7 @@ class JobStatus(str, Enum):
 
 
 class JobPriority(str, Enum):
-    """Job priority levels."""
+    
     LOW = "low"
     NORMAL = "normal"
     HIGH = "high"
@@ -52,35 +42,7 @@ class JobPriority(str, Enum):
 
 
 class QStashClient:
-    """
-    Production-grade QStash client for async job processing.
     
-    Features:
-    - Publish jobs to HTTP endpoints
-    - Schedule recurring jobs (cron)
-    - Delay job execution
-    - Automatic retries (3 attempts default)
-    - Dead letter queue
-    - Signature verification
-    - Metrics tracking
-    
-    Example:
-        client = QStashClient()
-        
-        # Publish immediate job
-        await client.publish(
-            endpoint="process-interview",
-            payload={"interview_id": "123"},
-            retries=3
-        )
-        
-        # Schedule recurring job
-        await client.schedule(
-            endpoint="daily-cleanup",
-            payload={},
-            cron="0 2 * * *"  # Daily at 2am
-        )
-    """
     
     def __init__(self):
         self.enabled = False
@@ -137,23 +99,7 @@ class QStashClient:
         priority: JobPriority = JobPriority.NORMAL,
         headers: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
-        """
-        Publish job to QStash for async processing.
         
-        Args:
-            endpoint: Webhook endpoint (e.g., "process-interview")
-            payload: Job payload (JSON serializable)
-            retries: Number of retry attempts (default: 3)
-            delay: Delay in seconds before execution (optional)
-            priority: Job priority level
-            headers: Additional headers to pass to webhook
-            
-        Returns:
-            QStash response with message ID
-            
-        Raises:
-            Exception: If QStash is not enabled or publish fails
-        """
         if not self.enabled:
             raise Exception("QStash is not enabled")
         
@@ -216,28 +162,7 @@ class QStashClient:
         cron: str,
         schedule_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Schedule recurring job with cron expression.
         
-        Args:
-            endpoint: Webhook endpoint
-            payload: Job payload
-            cron: Cron expression (e.g., "0 2 * * *" for daily at 2am)
-            schedule_id: Optional custom schedule ID
-            
-        Returns:
-            QStash response with schedule ID
-            
-        Example:
-            # Daily at 2am
-            await client.schedule("daily-cleanup", {}, "0 2 * * *")
-            
-            # Every hour
-            await client.schedule("hourly-sync", {}, "0 * * * *")
-            
-            # Every 5 minutes
-            await client.schedule("health-check", {}, "*/5 * * * *")
-        """
         if not self.enabled:
             raise Exception("QStash is not enabled")
         
@@ -278,15 +203,7 @@ class QStashClient:
             raise
     
     async def cancel_schedule(self, schedule_id: str) -> bool:
-        """
-        Cancel a scheduled job.
         
-        Args:
-            schedule_id: Schedule ID to cancel
-            
-        Returns:
-            True if cancelled successfully
-        """
         if not self.enabled:
             return False
         
@@ -302,12 +219,7 @@ class QStashClient:
             return False
     
     async def list_schedules(self) -> List[Dict[str, Any]]:
-        """
-        List all scheduled jobs.
         
-        Returns:
-            List of scheduled jobs
-        """
         if not self.enabled:
             return []
         
@@ -326,23 +238,7 @@ class QStashClient:
         url: str,
         timestamp: Optional[str] = None
     ) -> bool:
-        """
-        Verify QStash webhook signature for security.
         
-        Args:
-            signature: Upstash-Signature header value
-            body: Raw request body
-            url: Webhook URL
-            timestamp: Optional timestamp from header
-            
-        Returns:
-            True if signature is valid
-            
-        Security:
-            - Prevents unauthorized webhook calls
-            - Validates message integrity
-            - Protects against replay attacks
-        """
         if not self.signing_key:
             logger.warning("⚠️  Signature verification skipped - signing key not configured")
             return True  # Allow in development
@@ -392,7 +288,7 @@ class QStashClient:
             return False
     
     async def get_metrics(self) -> Dict[str, Any]:
-        """Get QStash client metrics."""
+        
         return {
             "enabled": self.enabled,
             "jobs_published": self._metrics["published"],
@@ -402,7 +298,7 @@ class QStashClient:
         }
     
     def reset_metrics(self):
-        """Reset metrics to zero."""
+        
         self._metrics = {
             "published": 0,
             "scheduled": 0,
@@ -411,7 +307,7 @@ class QStashClient:
         }
     
     async def close(self):
-        """Close HTTP client."""
+        
         if self.client:
             await self.client.aclose()
 
@@ -421,7 +317,7 @@ _qstash_client: Optional[QStashClient] = None
 
 
 def get_qstash() -> QStashClient:
-    """Get QStash client instance."""
+    
     global _qstash_client
     if _qstash_client is None:
         _qstash_client = QStashClient()

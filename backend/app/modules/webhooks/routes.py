@@ -1,20 +1,4 @@
-"""
-QStash Webhook Handlers
 
-Processes async jobs triggered by QStash.
-
-Endpoints:
-- POST /webhooks/process-interview - Process CV/JD analysis
-- POST /webhooks/generate-question - Generate interview question
-- POST /webhooks/evaluate-answer - Evaluate user answer
-- POST /webhooks/send-notification - Send notifications
-- POST /webhooks/daily-cleanup - Daily maintenance
-
-Security:
-- Signature verification on all webhooks
-- Rate limiting
-- Error handling with retries
-"""
 
 import logging
 from typing import Dict, Any
@@ -36,11 +20,7 @@ router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
 
 async def verify_qstash_signature(request: Request) -> bool:
-    """
-    Verify QStash webhook signature.
     
-    Security middleware to prevent unauthorized webhook calls.
-    """
     qstash = get_qstash()
     
     if not qstash.enabled:
@@ -79,28 +59,7 @@ async def process_interview_webhook(
     db: AsyncSession = Depends(get_db),
     verified: bool = Depends(verify_qstash_signature)
 ):
-    """
-    Process CV/JD analysis asynchronously.
     
-    Triggered by QStash after interview creation.
-    
-    Payload:
-        {
-            "interview_id": "uuid",
-            "job_id": "uuid",
-            "cv_text": "...",
-            "jd_text": "..."
-        }
-    
-    Flow:
-        1. Verify signature
-        2. Update job status to PROCESSING
-        3. Analyze CV (3-5s)
-        4. Analyze JD (3-5s)
-        5. Update interview record
-        6. Update job status to COMPLETED
-        7. Notify user (optional)
-    """
     tracker = get_job_tracker()
     
     try:
@@ -185,17 +144,7 @@ async def generate_question_webhook(
     db: AsyncSession = Depends(get_db),
     verified: bool = Depends(verify_qstash_signature)
 ):
-    """
-    Generate interview question asynchronously.
     
-    Payload:
-        {
-            "interview_id": "uuid",
-            "job_id": "uuid",
-            "turn_number": 1,
-            "phase": "technical"
-        }
-    """
     tracker = get_job_tracker()
     
     try:
@@ -241,17 +190,7 @@ async def evaluate_answer_webhook(
     db: AsyncSession = Depends(get_db),
     verified: bool = Depends(verify_qstash_signature)
 ):
-    """
-    Evaluate user answer asynchronously.
     
-    Payload:
-        {
-            "turn_id": "uuid",
-            "job_id": "uuid",
-            "question": "...",
-            "answer": "..."
-        }
-    """
     tracker = get_job_tracker()
     
     try:
@@ -296,16 +235,7 @@ async def send_notification_webhook(
     request: Request,
     verified: bool = Depends(verify_qstash_signature)
 ):
-    """
-    Send notification asynchronously.
     
-    Payload:
-        {
-            "user_id": "uuid",
-            "type": "interview_ready",
-            "data": {...}
-        }
-    """
     try:
         data = await request.json()
         user_id = data.get("user_id")
@@ -336,17 +266,7 @@ async def daily_cleanup_webhook(
     db: AsyncSession = Depends(get_db),
     verified: bool = Depends(verify_qstash_signature)
 ):
-    """
-    Daily maintenance tasks.
     
-    Scheduled via QStash cron: "0 2 * * *" (2am daily)
-    
-    Tasks:
-        - Clean up old job tracking data
-        - Archive completed interviews
-        - Generate daily statistics
-        - Clear expired cache entries
-    """
     try:
         logger.info("🧹 Running daily cleanup")
         
@@ -368,7 +288,7 @@ async def daily_cleanup_webhook(
 
 @router.get("/health")
 async def webhook_health():
-    """Health check for webhook service."""
+    
     qstash = get_qstash()
     tracker = get_job_tracker()
     
