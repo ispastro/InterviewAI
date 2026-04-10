@@ -14,7 +14,8 @@ import {
     ChevronRight,
     RotateCcw,
     LogOut,
-    User
+    User,
+    BarChart3
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent, Badge, PageTransition, InterviewCardSkeleton } from '@/components/ui';
 import { RadarChart } from '@/components/charts';
@@ -117,13 +118,21 @@ export default function DashboardPage() {
 
             <main className="px-6 py-12 max-w-7xl mx-auto">
                 {/* Welcome Section */}
-                <div className="mb-12">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                        Hi {userName}
-                    </h1>
-                    <p className="text-gray-600">
-                        You've completed {stats?.completed_interviews || 0} sessions
-                    </p>
+                <div className="mb-12 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                            Hi {userName}
+                        </h1>
+                        <p className="text-gray-600">
+                            You've completed {stats?.completed_interviews || 0} sessions
+                        </p>
+                    </div>
+                    <Link href="/analytics">
+                        <Button variant="outline" size="md">
+                            <BarChart3 size={18} className="mr-2" />
+                            View Analytics
+                        </Button>
+                    </Link>
                 </div>
 
                 {/* Quick Actions */}
@@ -170,10 +179,18 @@ export default function DashboardPage() {
                     {/* Performance Overview */}
                     <div className="lg:col-span-1">
                         <div className="border border-gray-200 p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                                <TrendingUp size={20} className="text-[#0D9488]" />
-                                Performance
-                            </h2>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                    <TrendingUp size={20} className="text-[#0D9488]" />
+                                    Performance
+                                </h2>
+                                <Link href="/analytics">
+                                    <button className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                                        Details
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </Link>
+                            </div>
                             <RadarChart scores={averageScores} />
                             <div className="mt-6 text-center">
                                 <p className="text-3xl font-bold text-gray-900">
