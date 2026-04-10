@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     REDIS_ENABLED: bool = False
     CACHE_TTL_SECONDS: int = 3600  # 1 hour default
 
+    # Upstash QStash (async job queue)
+    QSTASH_TOKEN: str = ""
+    QSTASH_CURRENT_SIGNING_KEY: str = ""
+    QSTASH_NEXT_SIGNING_KEY: str = ""
+    QSTASH_ENABLED: bool = False
+    API_BASE_URL: str = "http://localhost:8000"  # For QStash webhooks
+
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
     ENVIRONMENT: str = "development"
     APP_DEBUG: bool = False

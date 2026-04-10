@@ -8,5 +8,13 @@ This package contains clients for:
 """
 
 from .redis_client import UpstashRedisClient, get_redis
+from .qstash_client import QStashClient, get_qstash, JobStatus, JobPriority
 
-__all__ = ["UpstashRedisClient", "get_redis"]
+__all__ = [
+    "UpstashRedisClient",
+    "get_redis",
+    "QStashClient",
+    "get_qstash",
+    "JobStatus",
+    "JobPriority"
+]

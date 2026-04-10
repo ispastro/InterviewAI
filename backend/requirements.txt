@@ -32,6 +32,12 @@ redis[hiredis]==5.0.1
 # Upstash Redis (serverless caching)
 upstash-redis==0.15.0
 
+# Upstash QStash (serverless job queue)
+qstash==2.0.3
+
+# HTTP client for QStash
+httpx==0.27.0
+
 # Logging
 structlog==24.4.0
 

@@ -8,6 +8,7 @@ from app.core.error_handlers import register_exception_handlers
 from app.modules.auth.router import router as auth_router
 from app.modules.interviews.router import router as interviews_router
 from app.modules.websocket.routes import router as websocket_router
+from app.modules.webhooks import router as webhooks_router
 
 
 @asynccontextmanager
@@ -32,6 +33,22 @@ async def lifespan(app: FastAPI):
                 print("⚠️ App will work without caching")
         else:
             print("ℹ️ Redis caching disabled (REDIS_ENABLED=false)")
+        
+        # Initialize QStash
+        if settings.QSTASH_ENABLED:
+            try:
+                from app.integrations.upstash import get_qstash
+                qstash = get_qstash()
+                
+                if qstash.enabled:
+                    print(f"✅ QStash initialized (async jobs enabled)")
+                else:
+                    print("⚠️ QStash not configured - async jobs disabled")
+            except Exception as e:
+                print(f"⚠️ QStash initialization failed: {e}")
+                print("⚠️ App will work without async jobs")
+        else:
+            print("ℹ️ QStash disabled (QSTASH_ENABLED=false)")
         
         print(f"InterviewMe API started — env: {settings.ENVIRONMENT}")
     except Exception as e:
@@ -66,6 +83,7 @@ register_exception_handlers(app)
 app.include_router(auth_router)
 app.include_router(interviews_router)
 app.include_router(websocket_router)
+app.include_router(webhooks_router)
 
 
 @app.get("/health")
