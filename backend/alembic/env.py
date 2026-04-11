@@ -37,7 +37,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Set the database URL from our settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Escape % characters for ConfigParser (% -> %%)
+db_url = settings.DATABASE_URL.replace('%', '%%')
+config.set_main_option("sqlalchemy.url", db_url)
 
 # Add your model's MetaData object here for 'autogenerate' support
 target_metadata = Base.metadata
