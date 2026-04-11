@@ -9,6 +9,7 @@ export interface UseWebSocketOptions {
   onConnect?: (sessionId: string) => void;
   onDisconnect?: () => void;
   onError?: (error: Error) => void;
+  onStreaming?: (chunk: string, isComplete: boolean) => void;
 }
 
 export function useWebSocket(
@@ -16,7 +17,7 @@ export function useWebSocket(
   userId: string | null,
   options: UseWebSocketOptions = {}
 ) {
-  const { autoConnect = true, onConnect, onDisconnect, onError } = options;
+  const { autoConnect = true, onConnect, onDisconnect, onError, onStreaming } = options;
   const websocketConnected = useInterviewStore((state) => state.websocketConnected);
   const sessionId = useInterviewStore((state) => state.sessionId);
   const setSessionId = useInterviewStore((state) => state.setSessionId);
@@ -156,12 +157,17 @@ export function useWebSocket(
       }
     });
 
+    const unsubscribeStreaming = websocketService.onStreaming((chunk, isComplete) => {
+      onStreaming?.(chunk, isComplete);
+    });
+
     return () => {
       unsubscribeMessage();
       unsubscribeFeedback();
       unsubscribeStatus();
+      unsubscribeStreaming();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-connect on mount
   useEffect(() => {

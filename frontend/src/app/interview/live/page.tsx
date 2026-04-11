@@ -40,6 +40,8 @@ function LiveInterviewContent() {
     const [isPaused, setIsPaused] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [autoSpeakEnabled, setAutoSpeakEnabled] = useState(true);
+    const [streamingMessage, setStreamingMessage] = useState<string>('');
+    const [isStreaming, setIsStreaming] = useState(false);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const lastSpokenMessageRef = useRef<string | null>(null);
     const hasStartedRef = useRef(false);
@@ -79,6 +81,17 @@ function LiveInterviewContent() {
             console.error('❌ WebSocket error:', error);
             toast.error(error.message);
             setConnectionError(error.message);
+        },
+        onStreaming: (chunk, isComplete) => {
+            if (isComplete) {
+                // Streaming complete
+                setIsStreaming(false);
+                setStreamingMessage('');
+            } else {
+                // Accumulate chunks
+                setIsStreaming(true);
+                setStreamingMessage(prev => prev + chunk);
+            }
         },
     });
 
@@ -361,9 +374,23 @@ function LiveInterviewContent() {
                             {interview.messages.map((message) => (
                                 <ChatMessage key={message.id} message={message} />
                             ))}
+                            
+                            {/* Streaming message */}
+                            {isStreaming && streamingMessage && (
+                                <ChatMessage
+                                    key="streaming"
+                                    message={{
+                                        id: 'streaming',
+                                        sender: 'interviewer',
+                                        message: streamingMessage,
+                                        timestamp: new Date(),
+                                        streaming: true,
+                                    } as ChatMessageType}
+                                />
+                            )}
                         </AnimatePresence>
 
-                        {interview.isEvaluating && <TypingIndicator />}
+                        {interview.isEvaluating && !isStreaming && <TypingIndicator />}
                     </div>
 
                     <div className="flex-shrink-0 p-3 sm:p-6 border-t border-[#E5E7EB] bg-[#F8FAFC]">

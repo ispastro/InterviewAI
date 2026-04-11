@@ -125,7 +125,7 @@ async def handle_websocket_message(session_id: str, message: Dict[str, Any], db:
             print(f"Interview started for session {session_id}: {result}")
             
         elif message_type == MessageType.USER_RESPONSE:
-            # Process user response
+            # Process user response with streaming enabled
             user_response = data.get("response", "").strip()
             if not user_response:
                 await connection_manager.send_error(
@@ -135,7 +135,12 @@ async def handle_websocket_message(session_id: str, message: Dict[str, Any], db:
                 )
                 return
                 
-            result = await interview_engine.process_user_response(session_id, user_response, db)
+            result = await interview_engine.process_user_response(
+                session_id, 
+                user_response, 
+                db,
+                use_streaming=True  # Enable streaming by default
+            )
             print(f"User response processed for session {session_id}")
             
         elif message_type == "pause_interview":

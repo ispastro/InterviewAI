@@ -6,6 +6,8 @@ export type MessageType =
   | 'start_interview'
   | 'user_response'
   | 'ai_question'
+  | 'ai_question_chunk'
+  | 'ai_question_complete'
   | 'ai_feedback'
   | 'session_status'
   | 'pause_interview'
@@ -61,6 +63,11 @@ class WebSocketService {
   private messageHandlers: ((message: ChatMessage) => void)[] = [];
   private feedbackHandlers: ((feedback: Feedback) => void)[] = [];
   private statusHandlers: ((status: 'connected' | 'disconnected') => void)[] = [];
+  private streamingHandlers: ((chunk: string, isComplete: boolean) => void)[] = [];
+  
+  // Streaming state
+  private currentStreamingMessageId: string | null = null;
+  private streamingBuffer: string = '';
   
   // Message deduplication
   private processedMessageIds: Set<string> = new Set();
@@ -220,6 +227,60 @@ class WebSocketService {
         if (connectResolve) {
           connectResolve(this.sessionId || '');
         }
+        break;
+
+      case 'ai_question_chunk':
+        const chunkId = message.data.question_id;
+        const chunk = message.data.chunk || '';
+        
+        // Start new streaming message
+        if (!this.currentStreamingMessageId) {
+          this.currentStreamingMessageId = chunkId;
+          this.streamingBuffer = '';
+        }
+        
+        // Append chunk to buffer
+        this.streamingBuffer += chunk;
+        
+        // Notify streaming handlers
+        this.streamingHandlers.forEach(handler => handler(chunk, false));
+        break;
+
+      case 'ai_question_complete':
+        const completeId = message.data.question_id || `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Notify streaming completion
+        this.streamingHandlers.forEach(handler => handler('', true));
+        
+        // Create final chat message
+        const streamedMessage: ChatMessage = {
+          id: completeId,
+          sender: 'interviewer',
+          message: this.streamingBuffer || message.data.question || '',
+          timestamp: new Date(),
+          streaming: false,
+          metadata: {
+            question_type: message.data.question_type,
+            turn_number: message.data.turn_number,
+            focus_area: message.data.focus_area,
+            expected_duration: message.data.expected_duration,
+            is_probe: message.data.is_probe,
+            probe_reason: message.data.probe_reason,
+          }
+        };
+        
+        // Add to processed set
+        this.processedMessageIds.add(completeId);
+        if (this.processedMessageIds.size > this.MAX_PROCESSED_IDS) {
+          const firstId = this.processedMessageIds.values().next().value;
+          if (firstId) this.processedMessageIds.delete(firstId);
+        }
+        
+        this.messageHandlers.forEach(handler => handler(streamedMessage));
+        
+        // Reset streaming state
+        this.currentStreamingMessageId = null;
+        this.streamingBuffer = '';
         break;
 
       case 'ai_question':
@@ -517,6 +578,8 @@ class WebSocketService {
     this.reconnectAttempts = 0;
     this.messageQueue = [];
     this.processedMessageIds.clear(); // Clear deduplication cache
+    this.currentStreamingMessageId = null;
+    this.streamingBuffer = '';
   }
 
   // Event handlers
@@ -538,6 +601,13 @@ class WebSocketService {
     this.statusHandlers.push(handler);
     return () => {
       this.statusHandlers = this.statusHandlers.filter(h => h !== handler);
+    };
+  }
+
+  onStreaming(handler: (chunk: string, isComplete: boolean) => void): () => void {
+    this.streamingHandlers.push(handler);
+    return () => {
+      this.streamingHandlers = this.streamingHandlers.filter(h => h !== handler);
     };
   }
 
