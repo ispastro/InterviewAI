@@ -3,14 +3,17 @@ import json
 import logging
 from ...config import settings
 from app.modules.llm.gateway import llm_gateway
+from app.modules.llm.prompt_compressor import get_compressor
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
 class InterviewConductor:
     
-    def __init__(self):
+    def __init__(self, use_compression: bool = True, compression_level: float = 0.7):
         self.settings = settings
+        self.use_compression = use_compression
+        self.compressor = get_compressor(compression_level) if use_compression else None
         
     async def generate_opening_question(self, interview_data: Dict[str, Any]) -> Dict[str, Any]:
         
@@ -82,32 +85,53 @@ Return ONLY a JSON object with this structure:
         
         cv_analysis = interview_data.get("cv_analysis", {})
         jd_analysis = interview_data.get("jd_analysis", {})
-        interview_strategy = interview_data.get("interview_strategy", {})
         
         # Use memory context if available (AGENTIC ENHANCEMENT)
         if memory_context:
-            recent_turns = memory_context.get("recent_turns", conversation_history[-3:])
             performance_summary = memory_context.get("performance_summary", {})
             detected_patterns = memory_context.get("detected_patterns", {})
             uncovered_topics = memory_context.get("uncovered_topics", [])
         else:
-            recent_turns = conversation_history[-3:]
             performance_summary = {}
             detected_patterns = {}
             uncovered_topics = []
         
-        # Format conversation history with richer context
-        history_text = ""
-        for turn in recent_turns:
-            history_text += f"Q{turn.get('turn_number', 0)}: {turn.get('question', '')}\n"
-            history_text += f"A{turn.get('turn_number', 0)}: {turn.get('response', '')}\n"
-            eval_score = turn.get('evaluation', {}).get('overall_score', 0)
-            history_text += f"Score: {eval_score}/10\n\n"
+        # Get focus area
+        focus_area = "general"
+        if focus_recommendation and focus_recommendation.get("priority_topics"):
+            focus_area = focus_recommendation["priority_topics"][0]
         
-        # Build agentic prompt with memory insights
-        performance_text = ""
-        if performance_summary:
-            performance_text = f"""
+        # 🎯 USE PROMPT COMPRESSION (if enabled)
+        if self.use_compression and self.compressor:
+            logger.info(f"🗜️ Using prompt compression for turn {current_turn}")
+            prompt = self.compressor.build_compressed_prompt(
+                cv_analysis=cv_analysis,
+                jd_analysis=jd_analysis,
+                conversation_history=conversation_history,
+                focus_area=focus_area,
+                performance_summary=performance_summary,
+                current_turn=current_turn,
+                detected_patterns=detected_patterns,
+                uncovered_topics=uncovered_topics
+            )
+        else:
+            # Fallback to original verbose prompt
+            logger.info(f"📝 Using original prompt (no compression) for turn {current_turn}")
+            interview_strategy = interview_data.get("interview_strategy", {})
+            recent_turns = conversation_history[-3:]
+            
+            # Format conversation history
+            history_text = ""
+            for turn in recent_turns:
+                history_text += f"Q{turn.get('turn_number', 0)}: {turn.get('question', '')}\n"
+                history_text += f"A{turn.get('turn_number', 0)}: {turn.get('response', '')}\n"
+                eval_score = turn.get('evaluation', {}).get('overall_score', 0)
+                history_text += f"Score: {eval_score}/10\n\n"
+            
+            # Build performance text
+            performance_text = ""
+            if performance_summary:
+                performance_text = f"""
 
 CANDIDATE PERFORMANCE SO FAR:
 - Average Score: {performance_summary.get('average_score', 0)}/10
@@ -116,31 +140,31 @@ CANDIDATE PERFORMANCE SO FAR:
 - Communication: {performance_summary.get('communication_clarity_avg', 0)}/10
 - Confidence Level: {performance_summary.get('confidence_level', 'medium')}
 """
-        
-        patterns_text = ""
-        if detected_patterns:
-            if detected_patterns.get('strengths'):
-                patterns_text += f"\n✓ IDENTIFIED STRENGTHS: {', '.join(detected_patterns['strengths'][:3])}"
-            if detected_patterns.get('weaknesses'):
-                patterns_text += f"\n⚠ AREAS NEEDING IMPROVEMENT: {', '.join(detected_patterns['weaknesses'][:3])}"
-            if detected_patterns.get('red_flags'):
-                patterns_text += f"\n🚩 RED FLAGS: {len(detected_patterns['red_flags'])} detected"
-        
-        focus_text = ""
-        if focus_recommendation:
-            focus_text = f"""
+            
+            patterns_text = ""
+            if detected_patterns:
+                if detected_patterns.get('strengths'):
+                    patterns_text += f"\n✓ IDENTIFIED STRENGTHS: {', '.join(detected_patterns['strengths'][:3])}"
+                if detected_patterns.get('weaknesses'):
+                    patterns_text += f"\n⚠ AREAS NEEDING IMPROVEMENT: {', '.join(detected_patterns['weaknesses'][:3])}"
+                if detected_patterns.get('red_flags'):
+                    patterns_text += f"\n🚩 RED FLAGS: {len(detected_patterns['red_flags'])} detected"
+            
+            focus_text = ""
+            if focus_recommendation:
+                focus_text = f"""
 
 RECOMMENDED FOCUS:
 {focus_recommendation.get('recommendation', '')}
 - Priority Topics: {', '.join(focus_recommendation.get('priority_topics', [])[:3])}
 - Weak Areas to Probe: {', '.join(focus_recommendation.get('weak_areas_to_probe', [])[:2])}
 """
-        
-        uncovered_text = ""
-        if uncovered_topics:
-            uncovered_text = f"\n\nUNCOVERED REQUIRED TOPICS: {', '.join(uncovered_topics[:5])}"
-        
-        prompt = f"""
+            
+            uncovered_text = ""
+            if uncovered_topics:
+                uncovered_text = f"\n\nUNCOVERED REQUIRED TOPICS: {', '.join(uncovered_topics[:5])}"
+            
+            prompt = f"""
 You are an expert AI interviewer with deep memory and context awareness. You conduct natural, conversational interviews that adapt to the candidate's performance.
 
 CANDIDATE PROFILE:
@@ -474,5 +498,16 @@ Provide a comprehensive interview summary. Return ONLY a JSON object:
                 "interview_duration": len(conversation_history),
                 "total_turns": len(conversation_history)
             }
+    
+    def get_compression_metrics(self) -> Dict[str, Any]:
+        """
+        Get prompt compression metrics.
+        
+        Returns:
+            Dictionary with compression statistics
+        """
+        if self.use_compression and self.compressor:
+            return self.compressor.get_metrics()
+        return {"enabled": False, "message": "Compression is disabled"}
 
-interview_conductor = InterviewConductor()
+interview_conductor = InterviewConductor(use_compression=True, compression_level=0.7)

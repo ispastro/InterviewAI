@@ -159,6 +159,32 @@ async def redis_health():
         }
 
 
+@app.get("/health/compression")
+async def compression_health():
+    """Prompt compression health and metrics."""
+    try:
+        from app.modules.websocket.interview_conductor import interview_conductor
+        
+        metrics = interview_conductor.get_compression_metrics()
+        
+        if not metrics.get("enabled"):
+            return {
+                "status": "disabled",
+                "message": "Prompt compression is disabled"
+            }
+        
+        return {
+            "status": "healthy",
+            "metrics": metrics,
+            "message": f"Compression ratio: {metrics.get('compression_ratio', 0):.1f}%"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
 if settings.is_development:
     @app.get("/dev/test-auth")
     async def create_test_token():
