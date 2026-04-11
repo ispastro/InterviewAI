@@ -92,5 +92,7 @@ alembic/versions/*.pyc
 # Documentation files (keep local only)
 docs/**/*.md
 backend/docs/**/*.md
+*.md
+!README.md
 backend/COMMIT_MESSAGE_*.txt
 COMMIT_MESSAGE_*.txt
