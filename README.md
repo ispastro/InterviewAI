@@ -185,12 +185,11 @@ npm run test:e2e
 ### **1. Start an Interview**
 
 1. **Navigate to Setup**: Go to `/interview/setup`
-2. **Upload Documents**:
-   - Upload your CV (PDF, DOCX, or TXT)
-   - Upload job description
-   - Or paste text directly
-3. **Wait for Analysis**: AI analyzes both documents (~3-5 seconds)
-4. **Start Interview**: Click "Start AI Interview"
+2. **Upload CV**: Upload your CV (PDF, DOCX, or TXT) for validation
+3. **Upload JD**: Upload job description file or paste text directly
+4. **Add Company** (optional): Specify target company name
+5. **Create Interview**: System analyzes both documents (~3-5 seconds)
+6. **Start Interview**: Click "Start AI Interview" to begin
 
 ### **2. During Interview**
 
@@ -263,20 +262,19 @@ NEXT_PUBLIC_WS_URL=http://localhost:8000
 - `GET /dev/test-auth` - Create test token (dev only)
 
 #### **Interviews**
-- `POST /api/interviews/` - Create interview
+- `POST /api/interviews/upload-cv` - Upload & validate CV file (preview)
+- `POST /api/interviews/upload-jd` - Upload & validate JD file (preview)
+- `GET /api/interviews/file-info` - Get file metadata
+- `POST /api/interviews` - Create interview (CV file + JD file/text)
+- `GET /api/interviews` - List user's interviews (paginated)
 - `GET /api/interviews/{id}` - Get interview details
-- `POST /api/interviews/{id}/upload-cv` - Upload CV file
-- `POST /api/interviews/{id}/upload-cv-text` - Upload CV text
-- `POST /api/interviews/{id}/upload-jd` - Upload JD file
-- `POST /api/interviews/{id}/upload-jd-text` - Upload JD text
-- `PUT /api/interviews/{id}/start` - Start interview
-- `PUT /api/interviews/{id}/complete` - Complete interview
-- `GET /api/interviews/user` - Get user's interviews
-- `GET /api/interviews/user/stats` - Get user statistics
+- `PUT /api/interviews/{id}` - Update interview (target company)
 - `DELETE /api/interviews/{id}` - Delete interview
+- `POST /api/interviews/{id}/start` - Start interview
+- `POST /api/interviews/{id}/complete` - Complete interview
 - `GET /api/interviews/{id}/turns` - Get interview Q&A history
-- `GET /api/interviews/{id}/feedback` - Get interview feedback
-- `GET /api/interviews/{id}/analysis` - Get CV/JD analysis
+- `GET /api/interviews/stats/summary` - Get user statistics
+- `GET /api/interviews/health` - Interview service health check
 
 #### **Health Checks**
 - `GET /health` - Basic health check

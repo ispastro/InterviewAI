@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: interviewme-postgres
+    environment:
+      POSTGRES_USER: interviewme
+      POSTGRES_PASSWORD: interviewme_dev_password
+      POSTGRES_DB: interviewme
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U interviewme"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: interviewme-backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://interviewme:interviewme_dev_password@postgres:5432/interviewme
+      JWT_SECRET: development_secret_key_minimum_32_characters_long_for_local_testing
+      JWT_ALGORITHM: HS256
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: llama-3.3-70b-versatile
+      GROQ_MAX_TOKENS: 2048
+      GROQ_TEMPERATURE: 0.7
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN}
+      REDIS_ENABLED: ${REDIS_ENABLED:-true}
+      CACHE_TTL_SECONDS: 3600
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:3001"]'
+      ENVIRONMENT: development
+      APP_DEBUG: False
+      MAX_INTERVIEWS_PER_USER_PER_DAY: 10
+      MAX_WEBSOCKET_CONNECTIONS_PER_USER: 3
+      MAX_FILE_SIZE_MB: 5
+      ALLOWED_FILE_TYPES: '["pdf","docx","txt"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: interviewme-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: interviewme-network

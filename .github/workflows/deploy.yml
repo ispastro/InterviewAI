@@ -1,0 +1,159 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      env:
+        DATABASE_URL: sqlite+aiosqlite:///./test.db
+        JWT_SECRET: test_secret_key_minimum_32_characters_long_for_testing
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        REDIS_ENABLED: false
+      run: |
+        cd backend
+        python -m pytest tests/ -v --tb=short
+    
+    - name: Run production validation
+      env:
+        DATABASE_URL: sqlite+aiosqlite:///./test.db
+        JWT_SECRET: test_secret_key_minimum_32_characters_long_for_testing
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        REDIS_ENABLED: false
+      run: |
+        cd backend
+        python production_validation.py
+
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+    
+    - name: Cache Node modules
+      uses: actions/cache@v3
+      with:
+        path: frontend/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Build frontend
+      env:
+        NEXT_PUBLIC_API_URL: https://interviewme-api-prod.herokuapp.com
+        NEXT_PUBLIC_WS_URL: wss://interviewme-api-prod.herokuapp.com
+      run: |
+        cd frontend
+        npm run build
+
+  deploy-backend:
+    name: Deploy Backend to Heroku
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deploy to Heroku
+      uses: akhileshns/heroku-deploy@v3.12.14
+      with:
+        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+        heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        appdir: "backend"
+        healthcheck: "https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/health"
+        checkstring: "healthy"
+        delay: 5
+    
+    - name: Verify deployment
+      run: |
+        sleep 10
+        curl -f https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com/health || exit 1
+        echo "✅ Backend deployment successful"
+
+  deploy-frontend:
+    name: Deploy Frontend to Vercel
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deploy to Vercel
+      uses: amondnet/vercel-action@v20
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: ./frontend
+        vercel-args: '--prod'
+    
+    - name: Verify deployment
+      run: |
+        echo "✅ Frontend deployment successful"
+
+  notify:
+    name: Notify Deployment Status
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Deployment Success
+      if: ${{ needs.deploy-backend.result == 'success' && needs.deploy-frontend.result == 'success' }}
+      run: |
+        echo "🎉 Deployment successful!"
+        echo "Backend: https://${{ secrets.HEROKU_APP_NAME }}.herokuapp.com"
+        echo "Frontend: https://interviewme-app.vercel.app"
+    
+    - name: Deployment Failed
+      if: ${{ needs.deploy-backend.result == 'failure' || needs.deploy-frontend.result == 'failure' }}
+      run: |
+        echo "❌ Deployment failed!"
+        exit 1
