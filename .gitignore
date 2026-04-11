@@ -88,3 +88,7 @@ tmp/
 
 # Alembic
 alembic/versions/*.pyc
+
+# Documentation files (keep local only)
+backend/docs/*.md
+backend/COMMIT_MESSAGE_*.txt
