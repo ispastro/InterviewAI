@@ -27,7 +27,7 @@ export default function LandingPage() {
       <header className="border-b border-slate-800 sticky top-0 bg-slate-950/80 backdrop-blur-xl z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="InterviewMe" className="h-8 w-auto object-contain rounded-lg" />
+            <img src="/logo.png" alt="InterviewMe" className="h-8 w-auto object-contain rounded-lg border border-slate-700" />
             <span className="text-xl font-bold text-white">InterviewMe</span>
           </Link>
           <div className="flex items-center gap-8">
@@ -242,7 +242,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="InterviewMe" className="h-6 w-auto object-contain rounded-lg" />
+              <img src="/logo.png" alt="InterviewMe" className="h-6 w-auto object-contain rounded-lg border border-slate-700" />
               <span className="text-lg font-bold text-white">InterviewMe</span>
             </div>
             <div className="flex gap-8 text-sm text-slate-400">
